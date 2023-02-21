@@ -6,14 +6,10 @@
 #include <Ws2tcpip.h>
 #include <filesystem>
 #include <fstream>
-
-
-//#include "..\protocolAAD\ProtocolAAD.h"
-#include "..\dataExchange\dataExchange.h"
+#include "..\protocolAAD\ProtocolAAD.h"
 using namespace std;
 
-
-class Client
+class Client : public ProtocolAAD
 {
 private:
 	PCWSTR  ip = (L"127.0.0.1");
@@ -24,16 +20,19 @@ private:
 	string clientFilePath;
 
 	void exceptionNetworkConnections(const int& codeError, const string& descriptionError);
-	
-	void printMessageFromServer(ProtocolAAD data);
-	
 
-	void sendFileToServer();
+	void printMessageFromServer(ProtocolAAD * data);
+	ProtocolAAD generatingDataFileToSend();
+
+	//void sendDataText(SOCKET clientConnection, ProtocolAAD data);
+	//ProtocolAAD recvDataText(SOCKET clientConnection);
+
+	//void sendFileToServer();
+	void sendFileToServer(ProtocolAAD dataFile);
 
 	void workByServer();
 public:
-	Client(string & clientFilePath);
+	Client(string& clientFilePath);
 	bool checkingFileForExistence();
 	void connectToServer();
-
 };
