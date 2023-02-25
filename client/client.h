@@ -4,35 +4,25 @@
 #include <winsock2.h>
 #include <windows.h> 
 #include <Ws2tcpip.h>
-#include <filesystem>
 #include <fstream>
-#include "..\protocolAAD\ProtocolAAD.h"
-using namespace std;
+#include "..\ProtocolLib\ProtocolAAD.h"
+#include "..\Exception\ExceptionDirOrFile.h"
 
 class Client : public ProtocolAAD
 {
 private:
-	PCWSTR  ip = (L"127.0.0.1");
-	const int port = 5000;
-
-	//int clientID = 1;
+	PCWSTR  ip = (L"127.0.0.1"); // ip
+	const int port = 5000; // port
 	SOCKET clientSocketConnection;
-	string clientFilePath;
+	std::filesystem::path clientFilePath;
 
-	void exceptionNetworkConnections(const int& codeError, const string& descriptionError);
-
-	void printMessageFromServer(ProtocolAAD * data);
-	ProtocolAAD generatingDataFileToSend();
-
-	//void sendDataText(SOCKET clientConnection, ProtocolAAD data);
-	//ProtocolAAD recvDataText(SOCKET clientConnection);
-
-	//void sendFileToServer();
-	void sendFileToServer(ProtocolAAD dataFile);
-
-	void workByServer();
+	void printMessageFromServer(jsonDataFormat data); // метод, который печатает сообщение отправленное сервером
+	jsonDataFormat generatingDataFileToSend(); // метод, который генерирует информацию о файле, которую нужно отправить
+	void sendFileToServer(jsonDataFormat dataFile); // метод, который отправляет файл на сервер
+	void disconnect(SOCKET connect);
+	void workByServer(); // метод, который осуществляет взаимодействие с сервером
+	
 public:
-	Client(string& clientFilePath);
-	bool checkingFileForExistence();
-	void connectToServer();
+	Client(std::filesystem::path clientFilePath); // конструктор, инициализируется указанным путём до файла
+	void connectToServer(); // подключение к серверу
 };

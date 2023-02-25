@@ -1,132 +1,117 @@
 ﻿#include "client.h"
 
-Client::Client(string& clientFilePath) {
-    this->clientFilePath = clientFilePath;
+Client::Client(std::filesystem::path clientFilePath) {
+    ExceptionDirOrFile check;
+    if (check.checkingFileForExistence(clientFilePath)) {
+        this->clientFilePath = clientFilePath;
+       // if (check.checkStrPath(clientFilePath.string())) {
+      //      this->clientFilePath = clientFilePath;
+      //  }
+      //  else {
+      //      throw ExceptionDirOrFile(12, "dsad");
+      //  }
+    }
+    else {
+        throw ExceptionDirOrFile(11, "The specified file does not exist");
+    }
+   
 }
 
-bool Client::checkingFileForExistence() {
-    return filesystem::exists(this->clientFilePath);
+void Client::printMessageFromServer(jsonDataFormat data) {
+    std::cout << data.getMessage() << std::endl;
 }
 
-void Client::exceptionNetworkConnections(const int& codeError, const string& descriptionError) {
-    cout << "Код ошибки: " << codeError << endl;
-    cout << "Описание ошибки: " << descriptionError << endl;
+jsonDataFormat Client::generatingDataFileToSend() {
+    auto filename =this->clientFilePath.filename();
+    std::string filenameStr = filename.string(); // имя файла
+    const int fileSizeBytes = std::filesystem::file_size(this->clientFilePath) + 1; // размер файла
+    return jsonDataFormat(headerFile, filenameStr, fileSizeBytes);
 }
 
-void Client::printMessageFromServer(ProtocolAAD * data) {
-   data->printMessage();
-}
+void Client::sendFileToServer(jsonDataFormat dataFile) {
+    sendDataText(this->clientSocketConnection, dataFile, "fileInfo");
 
-/*void Client::sendFileToServer() {
-    auto filename = filesystem::path(this->clientFilePath).filename();
-    string filenameStr = filename.string();
-    send(this->clientSocketConnection, reinterpret_cast<char*>(&filenameStr), 128, 0);
-
-
-    ifstream sendFile;
-    sendFile.open(this->clientFilePath, ios_base::in | ios_base::binary);
-    int fileSizeBytes = filesystem::file_size(this->clientFilePath) + 1;
-    char* bytes = new char[fileSizeBytes];
-    sendFile.read(bytes, fileSizeBytes);
-
-    send(this->clientSocketConnection, to_string(fileSizeBytes).c_str(), 16, 0);
-    send(this->clientSocketConnection, bytes, fileSizeBytes, 0);
-    sendFile.close();
-    delete[] bytes;
-}*/
-
-ProtocolAAD Client::generatingDataFileToSend() {
-    auto filename = filesystem::path(this->clientFilePath).filename();
-    string filenameStr = filename.string(); // имя файла
-    int fileSizeBytes = filesystem::file_size(this->clientFilePath); // Размер файла
-    return ProtocolAAD(headerFile, filenameStr, fileSizeBytes);
-}
-
-void Client::sendFileToServer(ProtocolAAD dataFile) {
-    //char* tmp = reinterpret_cast<char*>(&dataFile);
-    //send(this->clientSocketConnection, tmp, sizeof(ProtocolAAD), 0); // отправляем данный о файле
-    sendDataText(this->clientSocketConnection, dataFile);
-
-    ifstream sendFile;
-    sendFile.open(this->clientFilePath, ios_base::in | ios_base::binary);
+    std::ifstream sendFile;
+    sendFile.open(this->clientFilePath.wstring(), std::ifstream::ios_base::in | std::ifstream::ios_base::binary);
     int fileSizeBytes = dataFile.getFileSize();
 
     char* bytes = new char[fileSizeBytes];
     sendFile.read(bytes, fileSizeBytes);
-
     send(this->clientSocketConnection, bytes, fileSizeBytes, 0); // отправляем байты
+    delete[] bytes;
 }
 
 
+void Client::disconnect(SOCKET connect) {
+    printMessageFromServer(recvDataText(this->clientSocketConnection));
+    closesocket(connect);
+}
+
 void Client::workByServer() {
    bool connect = true;
+   
    while (connect) {
-        ProtocolAAD * getData = recvDataText(this->clientSocketConnection); // получаем данные о том, какие команды нужно использовать
+        jsonDataFormat getData = recvDataText(this->clientSocketConnection); // получаем данные о том, какие команды нужно использовать
         printMessageFromServer(getData); // печатаем полученные данные о командах
-
-       bool select = true; // используется как флаг
-        while (select) {
-
-            string selectClient;
-            cin >> selectClient;
-
-            sendDataText(this->clientSocketConnection, ProtocolAAD(headerSelect, selectClient));  // отправляем введённую команду серверу
+        bool selectFlag = true; // используется как флаг
+        while (selectFlag) {
+            std::string selectClient;
+            std::cin >> selectClient;
+            sendDataText(this->clientSocketConnection, jsonDataFormat(headerSelect, selectClient));  // отправляем введённую команду серверу
 
             //В зависимости от того, что выбрал клиент, будет различное взаимодействие с сервером
             if (selectClient == "logIn") { // если клиент ввёл команду для авторизации
                 printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что нужно вести логин
-                string clientLogin;
-                cin >> clientLogin;
-                sendDataText(this->clientSocketConnection, ProtocolAAD(this->headerAuthentication, clientLogin)); // отправляем логин на сервер
+                std::string clientLogin;
+                std::cin >> clientLogin;
+                sendDataText(this->clientSocketConnection, jsonDataFormat(headerAuthentication, clientLogin)); // отправляем логин на сервер
 
                 printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что нужно вести пароль
-                string clientPasswd;
-                cin >> clientPasswd;
-                sendDataText(this->clientSocketConnection, ProtocolAAD(this->headerAuthentication, clientPasswd));  // отправляем пароль на сервер
+                std::string clientPasswd;
+                std::cin >> clientPasswd;
+                sendDataText(this->clientSocketConnection, jsonDataFormat(headerAuthentication, clientPasswd));  // отправляем пароль на сервер
                 
-                getData = recvDataText(this->clientSocketConnection); // получаем результат (флаг) авторизации
-
-                if (getData->getMessage() == "true") { // если авторизация выполнена успешно
-                    printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем сообщение об успешной авторизации
+                getData = recvDataText(this->clientSocketConnection); // получаем флаг авторизации
+                
+                if (getData.getMessage() == "true") { // если авторизация выполнена успешно
+                   // printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем сообщение об успешной авторизации
                     printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что нужно указать путь, где будет храниться файл на сервере
                     bool directoryServer = true;
                     while (directoryServer) {
-                        string filePathInServer;
-                        cin >> filePathInServer; // указываем путь на сервере, где должен сохраниться файл
-                        sendDataText(this->clientSocketConnection, ProtocolAAD(this->headerPathInServer, filePathInServer)); // отправляем указанный путь на сервер
+                        std::string filePathInServer;
+                        std::cin >> filePathInServer; // указываем путь на сервере, где должен сохраниться файл
+                        sendDataText(this->clientSocketConnection, jsonDataFormat(headerPathInServer, filePathInServer)); // отправляем указанный путь на сервер
                         getData = recvDataText(this->clientSocketConnection); // тут получаем флаг допустимый ли путь был указан
-                        if (getData->getMessage() == "true") { // если путь указан верно
-                             //sendFileToServer(); // отправляем файл на сервер
-                            //sendDataText(this->clientSocketConnection, generatingDataFileToSend());
+                        if (getData.getMessage() == "true") { // если путь указан верно
                             sendFileToServer(generatingDataFileToSend());
-                            cout << "Файл отправлен" << endl;
+                            std::cout << "Файл отправлен" << std::endl;
                             directoryServer = false;
                         }
                         else {
                             printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что указанный путь недопустим
                         }
                     }
+                    selectFlag = false;
                 }
-                else {
-                    printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку что авторизация не пройдена
-                }
+               else {
+                   printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку что авторизация не пройдена
+               }
             }
             else if (selectClient == "register") { // если клиент ввёл команду для регистрации
                 printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что нужно придумать логин
-                string clientLogin;
-                cin >> clientLogin;
-                sendDataText(this->clientSocketConnection, ProtocolAAD(this->headerRegistration, clientLogin)); // отправляем логин на сервер
+                std::string clientLogin;
+                std::cin >> clientLogin;
+                sendDataText(this->clientSocketConnection, jsonDataFormat(headerRegistration, clientLogin)); // отправляем логин на сервер
 
                 printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что нужно придумать пароль
-                string clientPasswd;
-                cin >> clientPasswd;
-                sendDataText(this->clientSocketConnection, ProtocolAAD(this->headerRegistration, clientPasswd));  // отправляем пароль на сервер
+                std::string clientPasswd;
+                std::cin >> clientPasswd;
+                sendDataText(this->clientSocketConnection, jsonDataFormat(headerRegistration, clientPasswd));  // отправляем пароль на сервер
 
                 printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем результат о регистрации
             }
             else if (selectClient == "disconnect") { // если клиент ввёл команду для отключения
-                printMessageFromServer(recvDataText(this->clientSocketConnection)); // получаем строку, что клиент отключён
-                select = false;
+                selectFlag = false;
             }
             else { // если клиент ввёл некорректную команду
                printMessageFromServer(recvDataText(this->clientSocketConnection)); // принимаем строку что нужно попробовать вести команду ещё раз
@@ -134,7 +119,7 @@ void Client::workByServer() {
         }
         connect = false;
     }
-   closesocket(this->clientSocketConnection);
+   disconnect(this->clientSocketConnection);
 }
 
 void Client::connectToServer() {
@@ -142,26 +127,26 @@ void Client::connectToServer() {
     WORD dllVersion = MAKEWORD(2, 1);
 
     if (WSAStartup(dllVersion, &wsaData) != 0) {
-        exceptionNetworkConnections(1, "не удалось иницилизировать WSAData");
+        throw ExceptionNetwork(1, "failed initialize WSADATA");
     }
 
     SOCKADDR_IN addrInfo;
-
     addrInfo.sin_family = AF_INET;
-    addrInfo.sin_port = htons(this->port);
-    InetPton(AF_INET, this->ip, &addrInfo.sin_addr.s_addr);
+    addrInfo.sin_port = htons(port);
+    InetPton(AF_INET, ip, &addrInfo.sin_addr.s_addr);
 
     int sizeAddrInfo = sizeof(addrInfo);
 
-
     this->clientSocketConnection = socket(AF_INET, SOCK_STREAM, 0);
-    int connectStatus = connect(this->clientSocketConnection, reinterpret_cast<SOCKADDR*>(&addrInfo), sizeAddrInfo);
+    if (this->clientSocketConnection == -1) {
+        throw ExceptionNetwork(2, "failed to create socket");
+    }
 
+    int connectStatus = connect(this->clientSocketConnection, reinterpret_cast<SOCKADDR*>(&addrInfo), sizeAddrInfo);
     if (connectStatus != 0) {
-        exceptionNetworkConnections(2, "не удалось подключиться к серверу");
+        throw ExceptionNetwork(3, "failed to connect to the server");
     }
     else {
         workByServer();
-        //closesocket(this->clientSocketConnection);
     }
 }
