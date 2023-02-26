@@ -3,18 +3,21 @@
 Client::Client(std::filesystem::path clientFilePath) {
     ExceptionDirOrFile check;
     if (check.checkingFileForExistence(clientFilePath)) {
-        this->clientFilePath = clientFilePath;
-       // if (check.checkStrPath(clientFilePath.string())) {
-      //      this->clientFilePath = clientFilePath;
-      //  }
-      //  else {
-      //      throw ExceptionDirOrFile(12, "dsad");
-      //  }
+        if (check.checkStrPath(clientFilePath.string())) {
+            if (check.isAbsolutePath(clientFilePath)) {
+                this->clientFilePath = clientFilePath;
+            }
+            else {
+                throw ExceptionDirOrFile(13, "you specified a relative path instead of an absolute one");
+            }
+        }
+        else {
+            throw ExceptionDirOrFile(12, "invalid characters are used in the names of paths");
+        }
     }
     else {
         throw ExceptionDirOrFile(11, "The specified file does not exist");
     }
-   
 }
 
 void Client::printMessageFromServer(jsonDataFormat data) {
@@ -22,9 +25,9 @@ void Client::printMessageFromServer(jsonDataFormat data) {
 }
 
 jsonDataFormat Client::generatingDataFileToSend() {
-    auto filename =this->clientFilePath.filename();
+    auto filename = this->clientFilePath.filename();
     std::string filenameStr = filename.string(); // имя файла
-    const int fileSizeBytes = std::filesystem::file_size(this->clientFilePath) + 1; // размер файла
+    const unsigned int fileSizeBytes = std::filesystem::file_size(this->clientFilePath) + 1; // размер файла
     return jsonDataFormat(headerFile, filenameStr, fileSizeBytes);
 }
 
@@ -32,12 +35,14 @@ void Client::sendFileToServer(jsonDataFormat dataFile) {
     sendDataText(this->clientSocketConnection, dataFile, "fileInfo");
 
     std::ifstream sendFile;
-    sendFile.open(this->clientFilePath.wstring(), std::ifstream::ios_base::in | std::ifstream::ios_base::binary);
+    sendFile.open(this->clientFilePath.string(), std::ifstream::ios_base::in | std::ifstream::ios_base::binary);
+   
     int fileSizeBytes = dataFile.getFileSize();
 
     char* bytes = new char[fileSizeBytes];
     sendFile.read(bytes, fileSizeBytes);
     send(this->clientSocketConnection, bytes, fileSizeBytes, 0); // отправляем байты
+    std::cout << "The file has been successfully sent to the server" << std::endl;
     delete[] bytes;
 }
 
@@ -83,8 +88,7 @@ void Client::workByServer() {
                         sendDataText(this->clientSocketConnection, jsonDataFormat(headerPathInServer, filePathInServer)); // отправляем указанный путь на сервер
                         getData = recvDataText(this->clientSocketConnection); // тут получаем флаг допустимый ли путь был указан
                         if (getData.getMessage() == "true") { // если путь указан верно
-                            sendFileToServer(generatingDataFileToSend());
-                            std::cout << "Файл отправлен" << std::endl;
+                            sendFileToServer(generatingDataFileToSend()); 
                             directoryServer = false;
                         }
                         else {
@@ -122,6 +126,15 @@ void Client::workByServer() {
    disconnect(this->clientSocketConnection);
 }
 
+std::string Client::initialServerResponse() {
+    char buffer[256];
+    int coutRecvBytes = recv(this->clientSocketConnection, buffer, 256, 0);
+    buffer[coutRecvBytes] = '\0';
+    std::string initialResponse(buffer);
+    return initialResponse;
+}
+
+
 void Client::connectToServer() {
     WSAData wsaData;
     WORD dllVersion = MAKEWORD(2, 1);
@@ -147,6 +160,12 @@ void Client::connectToServer() {
         throw ExceptionNetwork(3, "failed to connect to the server");
     }
     else {
-        workByServer();
+        std::string initialResponse = initialServerResponse();
+        if (initialResponse == "true") {
+            workByServer();
+        }
+        else {
+            std::cout << initialResponse << std::endl;
+        } 
     }
 }

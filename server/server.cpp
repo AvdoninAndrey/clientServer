@@ -1,31 +1,43 @@
 ﻿#include "server.h"
 
-/*std::wstring Server::convertStrToWstr(const std::string& str) {
-    int wchars_num = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
-    std::wstring resultWstr;
-    resultWstr.resize(wchars_num); // или через конструктор wide(wchars_num, 0);
-    MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, &resultWstr[0], wchars_num);
-    return resultWstr;
-}*/
+Server::ClientInfo::ClientInfo(SOCKET clientConnection, USHORT portClient) {
+    this->clientConnection = clientConnection;
+    this->portClient = portClient;
+}
+void Server::ClientInfo::printIncomingConnectionClient() {
+    std::cout << "Incoming connection: Port=" << this->portClient << std::endl;
+}
+
+SOCKET Server::ClientInfo::getSocketClient() {
+    return this->clientConnection;
+}
+		
+USHORT Server::ClientInfo::getPortClient() {
+    return this->portClient;
+}
 
 bool Server::checkRegistrationClientStr(const std::string& str) {
     return str.find('_') == std::string::npos ? true : false;
 }
 
 bool Server::authorizationClient(const std::string& loginClient, const std::string& passwdClient) {
-    const std::string clientLogInData = loginClient + "_" + passwdClient;
     bool result = false;
-    std::string buffer;
-    std::ifstream fileLogIn;
-    fileLogIn.open(this->fileAuthPath, std::ios_base::in);
-    while (!fileLogIn.eof()) {
-        getline(fileLogIn, buffer);
-        if (buffer == clientLogInData) {
-            result = true;
-            break;
+    if (checkAuthorizationClientAlreadyExists(loginClient)) {
+        const std::string clientLogInData = loginClient + "_" + passwdClient;
+        std::string buffer;
+        std::ifstream fileLogIn;
+        fileLogIn.open(this->fileAuthPath, std::ios_base::in);
+        while (!fileLogIn.eof()) {
+            getline(fileLogIn, buffer);
+            if (buffer == clientLogInData) {
+                this->authorizedСlientsList.push_back(loginClient);
+                result = true;
+                break;
+            }
         }
+        fileLogIn.close();
+        return result;
     }
-    fileLogIn.close();
     return result;
 }
 
@@ -55,7 +67,11 @@ bool Server::registrationClient(const std::string& newLoginClient, const std::st
 
 bool Server::checkDirectoryEnteredClient(const std::string& enteredDirectory) {
     const std::filesystem::path pathDirectory(enteredDirectory);
-    return std::filesystem::is_directory(pathDirectory.string());
+    ExceptionDirOrFile checkAbsolute;
+    if (checkAbsolute.isAbsolutePath(enteredDirectory)) {
+        return std::filesystem::is_directory(pathDirectory.string());
+    }
+    return false;
 }
 
 std::string Server::getMessageFromClient(jsonDataFormat data) {
@@ -69,86 +85,109 @@ void Server::recvFile(SOCKET client, const std::string& enteredDirectory) {
     if (recvBytes == -1) {
         throw ExceptionNetwork(8, "failed to accept file");
     }
-    
-
+   
     std::fstream fileSave;
     fileSave.open(enteredDirectory + "\\" + dataFile.getFilename(), std::fstream::ios_base::out | std::fstream::ios_base::binary);
     fileSave.write(bytes, dataFile.getFileSize());
-    std::cout << "The file with the name " << dataFile.getFilename() << " has been successfully saved on the server" << std::endl;
+    std::cout << "The file with the name \"" << dataFile.getFilename() << "\" has been successfully saved on the server" << std::endl;
     fileSave.close();
     delete[] bytes;
 }
 
-
-
-void Server::disconnectClient(SOCKET clientConnection) {
-    sendDataText(clientConnection, jsonDataFormat(headerError, disconnect));
-    closesocket(clientConnection);
+bool Server::checkAuthorizationClientAlreadyExists(const std::string& loginClient) {
+    for (size_t i = 0; i < this->authorizedСlientsList.size(); i++) {
+        if (authorizedСlientsList.at(i) == loginClient) {
+            return false;
+        }
+    }
+    return true;
 }
 
-void Server::handleClient(SOCKET * clientConnection) {
+void Server::removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient) {
+    int indexLoginRemove = 0;
+    for (size_t i = 0; i < this->authorizedСlientsList.size(); i++) {
+        if (authorizedСlientsList.at(i) == loginClient) {
+            indexLoginRemove = i;
+        }
+    }
+    auto iter = this->authorizedСlientsList.cbegin();
+    this->authorizedСlientsList.erase(iter + indexLoginRemove);
+}
+
+void Server::disconnectClient(SOCKET clientConnection, USHORT portClient, const std::string &loginClient) {
+    std::cout << "The client with the login \"" << loginClient <<"\" has been disabled" << std::endl;
+    std::cout << "The port " << portClient << " was released" << std::endl;
+    removeLoginFromTheListOfAuthorizedemoveLogin(loginClient);
+    sendDataText(clientConnection, jsonDataFormat(headerError, disconnect));
+    closesocket(clientConnection);
+    this->currentConnectionClient -= 1;
+}
+
+void Server::handleClient(SOCKET clientConnection, USHORT portClient) {
     bool connect = true;
+    std::string login;
     while (connect) {
-         sendDataText(*clientConnection, jsonDataFormat(headerSelect, textSelect));
+         sendDataText(clientConnection, jsonDataFormat(headerSelect, textSelect));
 
          bool selectFlag = true; // используется как флаг
          while (selectFlag) {
-             jsonDataFormat getData = recvDataText(*clientConnection); // выбор клиента по поводу авторизации, регистрации или отключения
+             jsonDataFormat getData = recvDataText(clientConnection); // выбор клиента по поводу авторизации, регистрации или отключения
              if (getMessageFromClient(getData) == "logIn") { //если клиент решил авторизоваться
-                 sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, textLogin)); // отправляем строку, что нужно вести логин
-                 std::string enteredLoginClient = getMessageFromClient(recvDataText(*clientConnection)); // принимаем введённый логин
+                 sendDataText(clientConnection, jsonDataFormat(headerAuthentication, textLogin)); // отправляем строку, что нужно вести логин
+                 std::string enteredLoginClient = getMessageFromClient(recvDataText(clientConnection)); // принимаем введённый логин
                 
-                 sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, textPassword));// отправляем строку, что нужно вести пароль
-                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(*clientConnection));  // принимаем введённый пароль
+                 sendDataText(clientConnection, jsonDataFormat(headerAuthentication, textPassword));// отправляем строку, что нужно вести пароль
+                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(clientConnection));  // принимаем введённый пароль
 
                  if (authorizationClient(enteredLoginClient, enteredPasswdClient)) { // авторизация Тут подумать об асинхронности
-                     std::cout << "The client with the login " << "\"" << enteredLoginClient << "\"" <<  " successfully logged in to the server" << std::endl;
-                     sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, flagResultTrue)); // если авторизация прошла успешно отправляем флаг, чтобы было правильно взаимодействие в клиенте
-                     //sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, successfulLogIn)); // отправляем сообщение, что авторизацая прошла успешно
+                     std::cout << "The client with the login " << "\"" << enteredLoginClient << "\"" <<  " successfully logged in to the server and is located on the port " << portClient  << std::endl;
+                     login = enteredLoginClient;
+                     sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultTrue)); // если авторизация прошла успешно отправляем флаг, чтобы было правильно взаимодействие в клиенте
                      bool directoryServer = true;
                      while (directoryServer) {
-                         sendDataText(*clientConnection, jsonDataFormat(headerPathInServer, enteredDirectoryForClient)); // отправляем строку, что нужно указать каталог, в котором будет храниться файл
-                         std::string enteredDirectory = getMessageFromClient(recvDataText(*clientConnection)); // получаем введённый каталог
+                         sendDataText(clientConnection, jsonDataFormat(headerPathInServer, enteredDirectoryForClient)); // отправляем строку, что нужно указать каталог, в котором будет храниться файл
+                         std::string enteredDirectory = getMessageFromClient(recvDataText(clientConnection)); // получаем введённый каталог
                          enteredDirectory = "D:\\Programming";
+                       
                         if (checkDirectoryEnteredClient(enteredDirectory)) { // если данный каталог существует на сервере
-                             sendDataText(*clientConnection, jsonDataFormat(headerFile, flagResultTrue)); // отправляем флаг результата
-                             recvFile(*clientConnection, enteredDirectory); // принимаем файл
+                             sendDataText(clientConnection, jsonDataFormat(headerFile, flagResultTrue)); // отправляем флаг результата
+                             recvFile(clientConnection, enteredDirectory); // принимаем файл
                              directoryServer = false;
                         }
                          else {
-                             sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));  // отправляем флаг, что авторизация не прошла
-                             sendDataText(*clientConnection, jsonDataFormat(headerFile, enteredDirectoryFailed)); // отправляем сообщение, что авторизация не пройдена
+                             sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));  // отправляем флаг, что путь не существует
+                             sendDataText(clientConnection, jsonDataFormat(headerFile, enteredDirectoryFailed)); // отправляем сообщение, что путь указан не верно
                          }
                      }
                      selectFlag = false;
                  }
                  else {
-                     sendDataText(*clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));
-                     sendDataText(*clientConnection, jsonDataFormat(headerError, failedLogIn)); // отправляем, что авторизацая прошла неудачно
+                     sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));
+                     sendDataText(clientConnection, jsonDataFormat(headerError, failedLogIn)); // отправляем, что авторизацая прошла неудачно
                  }
              }
              else if (getMessageFromClient(getData) == "register") { // если клиент решил зарегистрироваться
-                 sendDataText(*clientConnection, jsonDataFormat(headerRegistration, textNewLogin));  // отправляем строку, что нужно придумать логин
-                 std::string enteredLoginClient = getMessageFromClient(recvDataText(*clientConnection)); // принимаем (придуманный) введённый логин
-                 sendDataText(*clientConnection, jsonDataFormat(headerRegistration, textNewPassword)); // отправляем строку, что нужно придумать пароль
-                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(*clientConnection));  // принимаем (придуманный) введённый пароль
+                 sendDataText(clientConnection, jsonDataFormat(headerRegistration, textNewLogin));  // отправляем строку, что нужно придумать логин
+                 std::string enteredLoginClient = getMessageFromClient(recvDataText(clientConnection)); // принимаем (придуманный) введённый логин
+                 sendDataText(clientConnection, jsonDataFormat(headerRegistration, textNewPassword)); // отправляем строку, что нужно придумать пароль
+                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(clientConnection));  // принимаем (придуманный) введённый пароль
                  if (registrationClient(enteredLoginClient, enteredPasswdClient)) { //регистрация
-                     sendDataText(*clientConnection, jsonDataFormat(headerRegistration, successfulRegistration)); // если регистрация прошла удачно, отправляем соответствующие сообщение
+                     sendDataText(clientConnection, jsonDataFormat(headerRegistration, successfulRegistration)); // если регистрация прошла удачно, отправляем соответствующие сообщение
                  }
                  else {
-                     sendDataText(*clientConnection, jsonDataFormat(headerError, failedRegistration));  // если регистрация прошла неудачно, отправляем сообщение об ошибке
+                     sendDataText(clientConnection, jsonDataFormat(headerError, failedRegistration));  // если регистрация прошла неудачно, отправляем сообщение об ошибке
                  }
              }
              else if (getMessageFromClient(getData) == "disconnect") { // если клиент решил отключиться
                  selectFlag = false;
              }
              else { // если клиент указал несуществующую команду 
-                 sendDataText(*clientConnection, jsonDataFormat(headerError, incorrectInput));
+                 sendDataText(clientConnection, jsonDataFormat(headerError, incorrectInput));
              }
          }
         connect = false;
     } 
-    disconnectClient(*clientConnection);
+    disconnectClient(clientConnection, portClient, login);
 }
 
 
@@ -177,25 +216,34 @@ void Server::receivingСonnections() {
         throw ExceptionNetwork(5, "failed to bind");
     }
 
+   
+    //this->vectorClientsInfo.resize(this->maxClientConnection);
 
-    int listenResult = listen(socketListenConnections, 1);
-    if (listenResult == -1) {
-        throw ExceptionNetwork(6, "failed to listen for incoming connections");
-    }
+    while (listen(socketListenConnections, this->maxClientConnection) != SOCKET_ERROR) {
 
-    while (true) {
         SOCKET newClientConnection = accept(socketListenConnections, reinterpret_cast<SOCKADDR*>(&addrInfo), &sizeAddrInfo);
-        std::cout << "Incoming connection: Port=" << addrInfo.sin_port <<  std::endl;
-  
-
         if (newClientConnection == 0) {
             throw ExceptionNetwork(7, "connection could not be accepted");
         }
         else {
-           // thread newClient([&]() {
-                handleClient(&newClientConnection);
-              //  });
-           // newClient.detach();
+            
+            ClientInfo newClientInfo = ClientInfo(newClientConnection, addrInfo.sin_port);
+           
+            if (this->currentConnectionClient < this->maxClientConnection) {
+                std::string serverNotOverloaded = "true";
+                send(newClientInfo.getSocketClient(), serverNotOverloaded.c_str(), serverNotOverloaded.length(), 0);
+             
+                newClientInfo.printIncomingConnectionClient();
+                std::thread newClient([&]() {
+                    handleClient(newClientInfo.getSocketClient(), newClientInfo.getPortClient());
+                    });
+                newClient.detach();
+                this->currentConnectionClient++;
+            }
+           else {
+              std::string serverOverloaded = "The server is overloaded, try again later";
+              send(newClientInfo.getSocketClient(), serverOverloaded.c_str(), serverOverloaded.length(), 0);
+           }
         }
     }
 }

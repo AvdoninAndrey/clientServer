@@ -7,6 +7,7 @@
 #include <fstream>
 #include "..\ProtocolLib\ProtocolAAD.h"
 #include "..\Exception\ExceptionDirOrFile.h"
+//#include <chrono>
 
 class Client : public ProtocolAAD
 {
@@ -22,6 +23,7 @@ private:
 	void disconnect(SOCKET connect);
 	void workByServer(); // метод, который осуществляет взаимодействие с сервером
 	
+	std::string initialServerResponse();
 public:
 	Client(std::filesystem::path clientFilePath); // конструктор, инициализируется указанным путём до файла
 	void connectToServer(); // подключение к серверу

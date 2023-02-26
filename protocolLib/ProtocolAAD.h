@@ -28,14 +28,13 @@ protected:
 	std::string textNewLogin = "Come up with a login: ";
 	std::string textNewPassword = "Come up with a password: ";
 
-	//std::string successfulLogIn = "Authorization was successful!";
-	std::string failedLogIn = "Incorrect username or password, try again";
+	std::string failedLogIn = "Incorrect username or password, try again or is the client with such a login already authorized on the server";
 
 	std::string successfulRegistration = "Registration was successful! You can log in to the server.";
 	std::string failedRegistration = "A user with this username already exists or you used an invalid character (_)";
 
 	std::string enteredDirectoryForClient = "Specify the directory where the file will be stored:";
-	std::string enteredDirectoryFailed = "There is no such directory on the server";
+	std::string enteredDirectoryFailed = "There is no such directory on the server or the path is not absolutely specified";
 	
 
 	std::string incorrectInput = "You have entered a non-existent command, try again";

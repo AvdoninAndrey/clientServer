@@ -4,7 +4,7 @@ jsonDataFormat::jsonDataFormat(const std::string& header, const std::string& mes
     this->header = header;
     this->message = message;
 }
-jsonDataFormat::jsonDataFormat(const std::string& header, const std::string& filename, const int& fileSize) {
+jsonDataFormat::jsonDataFormat(const std::string& header, const std::string& filename, const unsigned int& fileSize) {
     this->header = header;
     this->filename = filename;
     this->fileSize = fileSize;
@@ -20,7 +20,7 @@ std::string jsonDataFormat::getHeader() {
 std::string jsonDataFormat::getFilename() {
     return this->filename;
 }
-int jsonDataFormat::getFileSize() {
+unsigned int jsonDataFormat::getFileSize() {
     return this->fileSize;
 }
 

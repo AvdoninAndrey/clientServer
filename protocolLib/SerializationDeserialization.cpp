@@ -25,7 +25,7 @@ jsonDataFormat SerializationDeserialization::deserialization(const std::string& 
     else if (typeData == "fileInfo") {
         getData.setHeader(jsonResultObject["header"].get<std::string>());
         getData.setFilename(jsonResultObject["filename"].get<std::string>());
-        getData.setfileSize(jsonResultObject["fileSize"].get<int>());
+        getData.setfileSize(jsonResultObject["fileSize"].get<unsigned int>());
     }
     return getData;
 }

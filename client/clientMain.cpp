@@ -3,15 +3,14 @@
 int main() {
 
 	setlocale(LC_ALL, "Russian");
-	std::string clientFilePath = "D:\\Programming\\C++\\clientServer\\client\\AvdoninAD_laba1.pdf";
-	
-	//std::wstring t = L"D:\\Учёба\\Учёба1Курс\\Алгебра\\ФВ.pdf";
-	//string clientFilePath;
-	//cout << "Укажите путь до файла, который вы хотите отправить на сервер: ";
+	std::string clientFilePath;
 	bool selectFileFlag = true;
 	while (selectFileFlag) {
-		//cin >> clientFilePath;
+		std::cout << "Specify the absolute (full) path to the file you want to send to the server:";
+		std::cin >> clientFilePath;
+		clientFilePath = "D:\\Programming\\JScourse\\Summer2022\\jsTrening\\1.js";
 		std::filesystem::path convertFilePath(clientFilePath);
+
 		try {
 			Client client(convertFilePath);
 			std::cout << "To send a file, you need to connect to the server\n";
@@ -28,7 +27,7 @@ int main() {
 					clientEnterFlag = false;
 				}
 				else {
-					std::cout << "Некорректный ввод..." << std::endl;
+					std::cout << "you have entered a non-existent command, try again" << std::endl;
 				}
 			}
 			selectFileFlag = false;
@@ -41,9 +40,10 @@ int main() {
 		catch (ExceptionDirOrFile & error) {
 			std::cerr << "Code error: " << error.getCodeError() << std::endl;
 			std::cerr << "Description error: " << error.getDescriptionError() << std::endl;
-			selectFileFlag = false;
+			std::cout << "Try to specify the path again" << std::endl;
 		}
 	}
-    std::cout << "Программа завершила свою работу" << std::endl;
+	Sleep(2000);
+    std::cout << "The program-client has finished its work" << std::endl;
     return 0;
 }
