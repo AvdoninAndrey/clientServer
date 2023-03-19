@@ -5,25 +5,33 @@
 #include <windows.h> 
 #include <Ws2tcpip.h>
 #include <fstream>
+#include <random>
 #include "..\ProtocolLib\ProtocolAAD.h"
 #include "..\Exception\ExceptionDirOrFile.h"
-//#include <chrono>
+#include "..\base64\base64\base64\base64.h"
 
-class Client : public ProtocolAAD
+
+class Client : public ProtocolAAD, public Base64
 {
 private:
-	PCWSTR  ip = (L"127.0.0.1"); // ip
-	const int port = 5000; // port
-	SOCKET clientSocketConnection;
-	std::filesystem::path clientFilePath;
+	const PCWSTR  IP = (L"127.0.0.1"); // ip
+	const int PORT = 55000; // port
+	const double USE_VERSION_PROTOCOL = 1.1;
+	const std::string PATH_FILE_ID_CLIENTS = "D:\\Programming\\C++\\clientServer\\client\\idClients.txt";
 
-	void printMessageFromServer(jsonDataFormat data); // метод, который печатает сообщение отправленное сервером
-	jsonDataFormat generatingDataFileToSend(); // метод, который генерирует информацию о файле, которую нужно отправить
-	void sendFileToServer(jsonDataFormat dataFile); // метод, который отправл€ет файл на сервер
-	void disconnect(SOCKET connect);
+	int generationIdForClient(); // генерирует id клиента
+	bool checkIdClientAlreadyExists(const int& idClient); // провер€ет есть ли клиент с таким же id
+	void removeClientIdFromFile(const int& idClient); // когда клиент отключаетс€ удал€етс€ id из списка
+
+
+	int clientId;
+	SOCKET clientSocketConnection; // сокет клиента
+	std::filesystem::path clientFilePath; // путь до файла, который клиент хочет передать на сервер
+	void printMessageFromResponseServer(ProtocolAAD data); // метод, который печатает ответ сервера
+
+	void sendFileToServer(); // метод, который отправл€ет файл на сервер
+	void disconnect(); // метод, который закрывает соединение с сервером
 	void workByServer(); // метод, который осуществл€ет взаимодействие с сервером
-	
-	std::string initialServerResponse();
 public:
 	Client(std::filesystem::path clientFilePath); // конструктор, инициализируетс€ указанным путЄм до файла
 	void connectToServer(); // подключение к серверу

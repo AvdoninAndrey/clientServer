@@ -8,50 +8,75 @@
 #include <thread>
 #include "..\ProtocolLib\ProtocolAAD.h"
 #include "..\Exception\ExceptionDirOrFile.h"
-#include <vector>
+#include "..\base64\base64\base64\base64.h"
+#include <map>
 
-class Server : public ProtocolAAD
+
+class Server : public ProtocolAAD, public Base64
 {
 private:
-	PCWSTR  ip = (L"127.0.0.1"); // ip
-	const int port = 5000; // port
-	const std::string fileAuthPath = "D:\\Programming\\C++\\clientServer\\server\\usersDataAuthentication.txt"; // путь до файла с учётными записями клиентов
-	
-	const int maxClientConnection = 2;
-	int currentConnectionClient = 0;
+	const PCWSTR  IP = (L"127.0.0.1"); // IP
+	const int PORT = 55000; // PORT
+	const std::string FILE_AUTH_PATH = "D:\\Programming\\C++\\clientServer\\server\\usersDataAuthentication.txt"; // путь до файла с учётными записями клиентов
+	const std::string DEFAULT_DIRECTORY_FOR_SAVE_FILES = "D:\\Programming\\C++\\clientServer\\server\\filesClients"; // стандартный каталог куда могут сохраняться файлы клиентов
+	const int MAX_CLIENT_CONNECTIONS = 3; // максимальное количество соединений
+	const double USE_VERSION_PROTOCOL = 1.1; // используемая версия протокола
 
+	const std::map<std::string, std::string> OPERATIONS_SERVER = { {"OPERATION_AUTHENTICATION", "logIn"}, {"OPERATION_REGISTRATION", "register"}, {"DISCONNECT", "disconnect"}}; // список операций на сервере при подключении
 
-	std::string getMessageFromClient(jsonDataFormat data); // метод, получащий сообщение, который отправил клиент
-	bool checkDirectoryEnteredClient(const std::string& enteredDirectory); // проверка, что указанный каталог клиентом существует
+	int currentConnectionClient = 0; // счётчик текущих подключений
+
+	bool checkDirectoryEnteredClient(const std::string& enteredDirectory); // проверка, что указанный каталог для сохранения существует
 	
 	bool checkRegistrationClientStr(const std::string& str); // проверка, чтобы в логине и пароли не была символа "_"
 
-	bool authorizationClient(const std::string& loginClient, const std::string& passwdClient); // метод, который производит авторизацию клиента
+	bool authorizationClient(const std::string& loginClient, const std::string& passwdClient); // метод, который производит аутентификации клиента
 	bool registrationClient(const std::string& newLoginClient, const std::string& newPasswdClient); // метод, который производит регистрирацию клиента
-	void recvFile(SOCKET client, const std::string& enteredDirectory); // метод, который принимает и сохраняет файл на сервере
+	void recvFile(ProtocolAAD requestFileSendFromClient, const bool flagDefaultPath, std::string pathForSave = ""); // метод, который принимает и сохраняет файл на сервере
 	
-	void disconnectClient(SOCKET clientConnection, USHORT portClient, const std::string& loginClient); // для отключения клиента от сервара
 	
-	void handleClient(SOCKET clientConnection, USHORT portClient); // работа с подключённым клиентом	
 	
-	bool checkAuthorizationClientAlreadyExists(const std::string & loginClient); // проверяет если такой клиент уже был авторизован на сервере
-	void removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient); // когда клиент отправил файл и отключается его логин удаляется из списка авторизованных клиентов
+	
+	bool checkAuthorizationClientAlreadyExists(const std::string & loginClient); // метод, который проверяет если такой клиент уже был аутентифицирован на сервере
+	void removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient); // при отключении от сервера логин клиента удаляется из списка аутентифицированнных клиентов
 
+	bool checkRequestConnetionFromClient(ProtocolAAD requestConnetion); // производит проверку запроса на подключения
+	bool checkRequestFileSendFromClient(ProtocolAAD requestFileSend); // производит проверку запроса на передачу файла
 
-	std::vector<std::string> authorizedСlientsList;
+	std::vector<std::string> authorizedСlientsList = {}; // хранит список аутентифицированных клиентов на сервере
 
-	class ClientInfo { //Класс хранит сокет клиента и порт на котором он взаимодействует с пользователем
-	private:
+	class ClientInfo { //Класс хранит сокет клиента, порт на котором он взаимодействует с пользователем и id клиента, а также если клиент прошёл аутентификацию и логин
+	public:
 		SOCKET clientConnection;
 		USHORT portClient;
-	public:
+		int clientId;
+		std::string loginClient = "";
 		void printIncomingConnectionClient();
-		SOCKET getSocketClient();
-		USHORT getPortClient();
-		ClientInfo() = default;
-		ClientInfo(SOCKET clientConnection, USHORT portClient);
+		ClientInfo(SOCKET clientConnection, USHORT portClient, const int ClientId);
 	};
+	void disconnectClient(ClientInfo dataClient); // для отключения клиента от сервара
+	void handleClient(ClientInfo client); //обработка подключённого клиента	
 
+	//=========Возможные ответы сервера======
+	const std::string responseSuccessfulConnection = "You have successfully connected to the server. To send a file to the server, you need to log in or register:\n"
+		"to log in, enter \"logIn\", to register, enter \"register\", to disconnect, enter \"disconnect\"";
+	const std::string responseServerOverloaded = "the server is overloaded";
+	
+	const std::string responseSuccessfulOperationAuthentication = "Enter your username and password";
+	const std::string responseSuccessfulOperationRegistration = "Come up with a username and password and enter";
+	const std::string responseSuccessfulOperationDisconnect = "You have been disconnected from the server";
+	const std::string responseFailedOperation = "You requested a non-existent operation";
+
+	const std::string responseSuccessfulAuthentication = "You have successfully authenticated.\nSpecify the directory to save the file on the server or enter \"default\" \nif you want to save the file in a standard directory";
+	const std::string responseFailedAuthentication = "The data is incorrect \n or is the client with this login already authenticated, please try again";
+	const std::string responseSuccessfulRegistration = "You have successfully registered";
+	const std::string responseFailedRegistration = "registration failed: a client with this username already exists\nor you used a prohibited one symbol \"_\", please try again";
+
+	const std::string responseSuccessfulSelectPath = "The path is specified correctly";
+	const std::string responseFailedSelectPath = "The path is incorrect, try again";
+
+	const std::string responseSuccessfulFileSend = "The file was saved successfully";
+	const std::string responseFailedFileSend = "Request incorrect file not accepted";
 public:
-	void receivingСonnections(); // принимает клиента
+	void receivingСonnections(); // принимает соединения клиентов
 };

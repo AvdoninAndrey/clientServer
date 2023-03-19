@@ -1,35 +1,21 @@
 #include "client.h"
 
 int main() {
-
-	setlocale(LC_ALL, "Russian");
 	std::string clientFilePath;
 	bool selectFileFlag = true;
+	
 	while (selectFileFlag) {
-		std::cout << "Specify the absolute (full) path to the file you want to send to the server:";
+		std::cout << "Specify the path to the file you want to want to the server:";
 		std::cin >> clientFilePath;
-		clientFilePath = "D:\\Programming\\JScourse\\Summer2022\\jsTrening\\1.js";
 		std::filesystem::path convertFilePath(clientFilePath);
+
+		if (!convertFilePath.is_absolute()) {
+			convertFilePath = std::filesystem::absolute(convertFilePath);
+		}
 
 		try {
 			Client client(convertFilePath);
-			std::cout << "To send a file, you need to connect to the server\n";
-			std::cout << "Enter \"connect\" to connect or \"exit\" to exit the program: ";
-			bool clientEnterFlag = true;
-			while (clientEnterFlag) {
-				std::string select;
-				std::cin >> select;
-				if (select == "connect") {
-					client.connectToServer();
-					clientEnterFlag = false;
-				}
-				else if (select == "exit") {
-					clientEnterFlag = false;
-				}
-				else {
-					std::cout << "you have entered a non-existent command, try again" << std::endl;
-				}
-			}
+			client.connectToServer();
 			selectFileFlag = false;
 		}
 		catch (ExceptionNetwork& error) {
@@ -43,7 +29,7 @@ int main() {
 			std::cout << "Try to specify the path again" << std::endl;
 		}
 	}
+	std::cout << "The program-client has finished its work" << std::endl;
 	Sleep(2000);
-    std::cout << "The program-client has finished its work" << std::endl;
     return 0;
 }

@@ -1,23 +1,16 @@
 ﻿#include "server.h"
 
-Server::ClientInfo::ClientInfo(SOCKET clientConnection, USHORT portClient) {
+Server::ClientInfo::ClientInfo(SOCKET clientConnection, USHORT portClient, const int clientId) {
     this->clientConnection = clientConnection;
     this->portClient = portClient;
+    this->clientId = clientId;
 }
 void Server::ClientInfo::printIncomingConnectionClient() {
-    std::cout << "Incoming connection: Port=" << this->portClient << std::endl;
-}
-
-SOCKET Server::ClientInfo::getSocketClient() {
-    return this->clientConnection;
-}
-		
-USHORT Server::ClientInfo::getPortClient() {
-    return this->portClient;
+    std::cout << "Incoming connection: Port=" << this->portClient << "\tIdClient=" << this->clientId << std::endl;
 }
 
 bool Server::checkRegistrationClientStr(const std::string& str) {
-    return str.find('_') == std::string::npos ? true : false;
+    return  str.find('_') == std::string::npos ? true : false;
 }
 
 bool Server::authorizationClient(const std::string& loginClient, const std::string& passwdClient) {
@@ -26,7 +19,7 @@ bool Server::authorizationClient(const std::string& loginClient, const std::stri
         const std::string clientLogInData = loginClient + "_" + passwdClient;
         std::string buffer;
         std::ifstream fileLogIn;
-        fileLogIn.open(this->fileAuthPath, std::ios_base::in);
+        fileLogIn.open(this->FILE_AUTH_PATH, std::ios_base::in);
         while (!fileLogIn.eof()) {
             getline(fileLogIn, buffer);
             if (buffer == clientLogInData) {
@@ -46,7 +39,7 @@ bool Server::registrationClient(const std::string& newLoginClient, const std::st
     std::string buffer;
     if (checkRegistrationClientStr(newLoginClient) && checkRegistrationClientStr(newPasswdClient)) {
         std::ifstream fileLogIn;
-        fileLogIn.open(this->fileAuthPath, std::ios_base::in);
+        fileLogIn.open(this->FILE_AUTH_PATH, std::ios_base::in);
         while (!fileLogIn.eof()) {
             getline(fileLogIn, buffer);
             if (buffer.substr(0, buffer.find('_')) == newLoginClient) {
@@ -55,9 +48,9 @@ bool Server::registrationClient(const std::string& newLoginClient, const std::st
             }
         }
         fileLogIn.close();
-        const std::string clientNewLogInData = newLoginClient + "_" +  newPasswdClient + "\n";
+        const std::string clientNewLogInData = newLoginClient + "_" + newPasswdClient + "\n";
         std::ofstream addClientTofileLogIn;
-        addClientTofileLogIn.open(this->fileAuthPath, std::ofstream::app);
+        addClientTofileLogIn.open(this->FILE_AUTH_PATH, std::ofstream::app);
         addClientTofileLogIn << clientNewLogInData;
         addClientTofileLogIn.close();
         return true;
@@ -66,32 +59,36 @@ bool Server::registrationClient(const std::string& newLoginClient, const std::st
 }
 
 bool Server::checkDirectoryEnteredClient(const std::string& enteredDirectory) {
-    const std::filesystem::path pathDirectory(enteredDirectory);
-    ExceptionDirOrFile checkAbsolute;
-    if (checkAbsolute.isAbsolutePath(enteredDirectory)) {
-        return std::filesystem::is_directory(pathDirectory.string());
+    std::filesystem::path pathDirectory(enteredDirectory);
+    if (!pathDirectory.is_absolute()) {
+        pathDirectory = std::filesystem::absolute(pathDirectory);
     }
-    return false;
+    return std::filesystem::is_directory(pathDirectory);
 }
 
-std::string Server::getMessageFromClient(jsonDataFormat data) {
-    return data.getMessage();
-}
+void Server::recvFile(ProtocolAAD requestFileSendFromClient, const bool flagDefaultPath, std::string pathForSave) {
+     const uintmax_t sizeFile = requestFileSendFromClient.getFieldsSizeFile();
 
-void Server::recvFile(SOCKET client, const std::string& enteredDirectory) {
-    jsonDataFormat dataFile = recvDataText(client, "fileInfo");
-    char* bytes = new char[dataFile.getFileSize()];
-    int recvBytes = recv(client, bytes, dataFile.getFileSize(), 0);
-    if (recvBytes == -1) {
-        throw ExceptionNetwork(8, "failed to accept file");
-    }
-   
-    std::fstream fileSave;
-    fileSave.open(enteredDirectory + "\\" + dataFile.getFilename(), std::fstream::ios_base::out | std::fstream::ios_base::binary);
-    fileSave.write(bytes, dataFile.getFileSize());
-    std::cout << "The file with the name \"" << dataFile.getFilename() << "\" has been successfully saved on the server" << std::endl;
-    fileSave.close();
-    delete[] bytes;
+     char* bytesChar = new char[sizeFile];
+       
+    std::string bytesBase64decode = base64Decode(requestFileSendFromClient.getFieldsBytesFormatBase64());
+     
+   for (int i = 0; i < sizeFile; i++) {
+         bytesChar[i] = bytesBase64decode[i];
+   }
+
+   std::fstream fileSave;
+   if (flagDefaultPath) {
+       fileSave.open(DEFAULT_DIRECTORY_FOR_SAVE_FILES + "\\" + requestFileSendFromClient.getFieldsFilename(), std::fstream::ios_base::out | std::fstream::ios_base::binary);
+   }
+   else {
+       fileSave.open(pathForSave + "\\" + requestFileSendFromClient.getFieldsFilename(), std::fstream::ios_base::out | std::fstream::ios_base::binary);
+   }
+
+   fileSave.write(bytesChar, requestFileSendFromClient.getFieldsSizeFile());
+   std::cout << "The file with the name \"" << requestFileSendFromClient.getFieldsFilename() << "\" has been successfully saved on the server" << std::endl;
+   fileSave.close();
+   delete[] bytesChar;
 }
 
 bool Server::checkAuthorizationClientAlreadyExists(const std::string& loginClient) {
@@ -106,7 +103,7 @@ bool Server::checkAuthorizationClientAlreadyExists(const std::string& loginClien
 void Server::removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient) {
     int indexLoginRemove = 0;
     for (size_t i = 0; i < this->authorizedСlientsList.size(); i++) {
-        if (authorizedСlientsList.at(i) == loginClient) {
+        if (authorizedСlientsList[i] == loginClient) {
             indexLoginRemove = i;
         }
     }
@@ -114,82 +111,129 @@ void Server::removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& log
     this->authorizedСlientsList.erase(iter + indexLoginRemove);
 }
 
-void Server::disconnectClient(SOCKET clientConnection, USHORT portClient, const std::string &loginClient) {
-    std::cout << "The client with the login \"" << loginClient <<"\" has been disabled" << std::endl;
-    std::cout << "The port " << portClient << " was released" << std::endl;
-    removeLoginFromTheListOfAuthorizedemoveLogin(loginClient);
-    sendDataText(clientConnection, jsonDataFormat(headerError, disconnect));
-    closesocket(clientConnection);
+void Server::disconnectClient(ClientInfo dataClient) {
+    if (dataClient.loginClient == "") {
+        std::cout << "The client with the id \"" << dataClient.clientId << "\" has been disabled" << std::endl;
+    }
+    else {
+        std::cout << "The client with the login \"" << dataClient.loginClient << "\" has been disabled" << std::endl;
+        removeLoginFromTheListOfAuthorizedemoveLogin(dataClient.loginClient);
+    }
+    closesocket(dataClient.clientConnection);
     this->currentConnectionClient -= 1;
 }
 
-void Server::handleClient(SOCKET clientConnection, USHORT portClient) {
+void Server::handleClient(ClientInfo client) {
     bool connect = true;
-    std::string login;
+    SOCKET socketClient = client.clientConnection;
+    const int id = client.clientId;
+
     while (connect) {
-         sendDataText(clientConnection, jsonDataFormat(headerSelect, textSelect));
-
-         bool selectFlag = true; // используется как флаг
-         while (selectFlag) {
-             jsonDataFormat getData = recvDataText(clientConnection); // выбор клиента по поводу авторизации, регистрации или отключения
-             if (getMessageFromClient(getData) == "logIn") { //если клиент решил авторизоваться
-                 sendDataText(clientConnection, jsonDataFormat(headerAuthentication, textLogin)); // отправляем строку, что нужно вести логин
-                 std::string enteredLoginClient = getMessageFromClient(recvDataText(clientConnection)); // принимаем введённый логин
-                
-                 sendDataText(clientConnection, jsonDataFormat(headerAuthentication, textPassword));// отправляем строку, что нужно вести пароль
-                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(clientConnection));  // принимаем введённый пароль
-
-                 if (authorizationClient(enteredLoginClient, enteredPasswdClient)) { // авторизация Тут подумать об асинхронности
-                     std::cout << "The client with the login " << "\"" << enteredLoginClient << "\"" <<  " successfully logged in to the server and is located on the port " << portClient  << std::endl;
-                     login = enteredLoginClient;
-                     sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultTrue)); // если авторизация прошла успешно отправляем флаг, чтобы было правильно взаимодействие в клиенте
-                     bool directoryServer = true;
-                     while (directoryServer) {
-                         sendDataText(clientConnection, jsonDataFormat(headerPathInServer, enteredDirectoryForClient)); // отправляем строку, что нужно указать каталог, в котором будет храниться файл
-                         std::string enteredDirectory = getMessageFromClient(recvDataText(clientConnection)); // получаем введённый каталог
-                         enteredDirectory = "D:\\Programming";
-                       
-                        if (checkDirectoryEnteredClient(enteredDirectory)) { // если данный каталог существует на сервере
-                             sendDataText(clientConnection, jsonDataFormat(headerFile, flagResultTrue)); // отправляем флаг результата
-                             recvFile(clientConnection, enteredDirectory); // принимаем файл
-                             directoryServer = false;
+        ProtocolAAD requestSelectOpetationFromClient = recvData(socketClient); // принимаем запрос на операцию
+        if (requestSelectOpetationFromClient.getFieldsOperation() == this->OPERATIONS_SERVER.at("OPERATION_AUTHENTICATION")) { // пришёл запрос на операцию аутентификации
+            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulOperationAuthentication)); // отправляем ответ "Введите логин и пароль"
+            ProtocolAAD requestAuthenticationFromClient = recvData(socketClient);  // пришёл запрос аутентификации
+            if (authorizationClient(requestAuthenticationFromClient.getFieldsLogin(), requestAuthenticationFromClient.getFieldsPassword())) { // производится проверка данных от учётной записи
+               
+                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulAuthentication)); // отправляем ответ "удачная аутентификация"
+                client.loginClient = requestAuthenticationFromClient.getFieldsLogin();
+                std::cout << "The client with the ID \"" << id << "\" has authenticated under the login \"" << client.loginClient << "\"" << std::endl;
+                bool selectDirectoryFile = true;
+                while (selectDirectoryFile) {
+                    ProtocolAAD requestDirectoryToSaveFromClient = recvData(socketClient); // принимаем запрос на выбор каталога для сохранения
+                    bool flagDefaultPath = true;
+                    if (requestDirectoryToSaveFromClient.getFieldsIsDefaultServerPath()) {
+                        sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulSelectPath)); // отправляем ответ "путь указан верно"
+                        ProtocolAAD requestFileSendFromClient = recvData(socketClient); // принимаем запрос на передачу файла
+                        if (checkRequestFileSendFromClient(requestFileSendFromClient)) { // проверям запрос на передачу файла
+                            recvFile(requestFileSendFromClient, flagDefaultPath); // принимаем файл
+                            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulFileSend)); // отправляем ответ "файл успешно сохранён"
+                            selectDirectoryFile = false;
                         }
-                         else {
-                             sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));  // отправляем флаг, что путь не существует
-                             sendDataText(clientConnection, jsonDataFormat(headerFile, enteredDirectoryFailed)); // отправляем сообщение, что путь указан не верно
-                         }
-                     }
-                     selectFlag = false;
-                 }
-                 else {
-                     sendDataText(clientConnection, jsonDataFormat(headerAuthentication, flagResultFalse));
-                     sendDataText(clientConnection, jsonDataFormat(headerError, failedLogIn)); // отправляем, что авторизацая прошла неудачно
-                 }
-             }
-             else if (getMessageFromClient(getData) == "register") { // если клиент решил зарегистрироваться
-                 sendDataText(clientConnection, jsonDataFormat(headerRegistration, textNewLogin));  // отправляем строку, что нужно придумать логин
-                 std::string enteredLoginClient = getMessageFromClient(recvDataText(clientConnection)); // принимаем (придуманный) введённый логин
-                 sendDataText(clientConnection, jsonDataFormat(headerRegistration, textNewPassword)); // отправляем строку, что нужно придумать пароль
-                 std::string enteredPasswdClient = getMessageFromClient(recvDataText(clientConnection));  // принимаем (придуманный) введённый пароль
-                 if (registrationClient(enteredLoginClient, enteredPasswdClient)) { //регистрация
-                     sendDataText(clientConnection, jsonDataFormat(headerRegistration, successfulRegistration)); // если регистрация прошла удачно, отправляем соответствующие сообщение
-                 }
-                 else {
-                     sendDataText(clientConnection, jsonDataFormat(headerError, failedRegistration));  // если регистрация прошла неудачно, отправляем сообщение об ошибке
-                 }
-             }
-             else if (getMessageFromClient(getData) == "disconnect") { // если клиент решил отключиться
-                 selectFlag = false;
-             }
-             else { // если клиент указал несуществующую команду 
-                 sendDataText(clientConnection, jsonDataFormat(headerError, incorrectInput));
-             }
-         }
-        connect = false;
-    } 
-    disconnectClient(clientConnection, portClient, login);
+                        else {
+                            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, USE_VERSION_PROTOCOL, responseFailedFileSend)); // отправляем ответ "запрос неправильный, файл не будет принят"
+                            selectDirectoryFile = false;
+                        }
+                    }
+                    else {
+                        std::string enteredPathClient = requestDirectoryToSaveFromClient.getFieldsPathDirectory(); // получаем указанный клиентом каталог
+
+                        if (checkDirectoryEnteredClient(enteredPathClient)) { // проверяем каталог на корректность
+                            flagDefaultPath = false;
+                            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulSelectPath)); // отправляем ответ "путь указан верно"
+                            ProtocolAAD requestFileSendFromClient = recvData(socketClient); // принимаем запрос на передачу файла
+                            if (checkRequestFileSendFromClient(requestFileSendFromClient)) {
+                                recvFile(requestFileSendFromClient, flagDefaultPath, enteredPathClient); // тут будем принимать файл
+                                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulFileSend)); // отправляем ответ "файл успешно сохранён"
+                                selectDirectoryFile = false;
+                               
+                            }
+                            else {
+                                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, USE_VERSION_PROTOCOL, responseFailedFileSend)); // отправляем ответ "запрос неправильный, файл не будет принят"
+                                selectDirectoryFile = false;
+                            }                                                                                                                                            
+                        }
+                        else {
+                            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, USE_VERSION_PROTOCOL, responseFailedSelectPath)); // отправляем ответ "путь указан неверно"
+                        }
+                    }
+                }
+                connect = false;
+            }
+            else {
+                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, USE_VERSION_PROTOCOL, responseFailedAuthentication)); // отправляем ответ "данные неверные"
+            }
+
+        }
+        else if (requestSelectOpetationFromClient.getFieldsOperation() == this->OPERATIONS_SERVER.at("OPERATION_REGISTRATION")) { // пришёл запрос на операцию регистрации
+            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, this->USE_VERSION_PROTOCOL, responseSuccessfulOperationRegistration)); // отправляем ответ "Придумайте логин и пароль"
+            ProtocolAAD requestRegistrationFromClient = recvData(socketClient);  // пришёл запрос регистрации
+            if (registrationClient(requestRegistrationFromClient.getFieldsNewLogin(), requestRegistrationFromClient.getFieldsNewPassword())) {
+                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulRegistration)); // отправляем ответ "регистрация пройдена"
+            }
+            else {
+                sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseFailedRegistration)); // отправляем ответ "регистрация  не пройдена"
+            }
+        }
+        else if (requestSelectOpetationFromClient.getFieldsOperation() == this->OPERATIONS_SERVER.at("DISCONNECT")) { // пришёл запрос на операцию отключения
+            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, USE_VERSION_PROTOCOL, responseSuccessfulOperationDisconnect)); // отправляем ответ "вы были отключены"
+            connect = false;
+        }
+        else { // пришёл запрос на не существующую операцию
+            sendData(socketClient, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, USE_VERSION_PROTOCOL, responseFailedOperation)); // отправляем ответ "указанной операции не существует"
+        }
+    }
+    disconnectClient(client); // отключаем клиента
 }
 
+
+bool Server::checkRequestConnetionFromClient(ProtocolAAD requestConnetion) {
+    if (requestConnetion.getFieldsHeader() == headerConnection) {
+        if (requestConnetion.getFieldsVersionProtocol() == this->USE_VERSION_PROTOCOL) {
+            if (requestConnetion.getFieldsClientID() >= 1 && requestConnetion.getFieldsClientID() <= 3) {
+                if (requestConnetion.getFieldsDateAndTimeConnection() != "") {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool Server::checkRequestFileSendFromClient(ProtocolAAD requestFileSend) {
+    if (requestFileSend.getFieldsClientID()) {
+        if (requestFileSend.getFieldsFileSend()) {
+            if (requestFileSend.getFieldsFilename() != "") {
+                if (requestFileSend.getFieldsSizeFile() != 0) {
+                    if (requestFileSend.getFieldsBytesFormatBase64() != "") {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
 
 
 void Server::receivingСonnections() {
@@ -202,8 +246,8 @@ void Server::receivingСonnections() {
     SOCKADDR_IN addrInfo;
 
     addrInfo.sin_family = AF_INET;
-    addrInfo.sin_port = htons(this->port);
-    InetPton(AF_INET, this->ip, &addrInfo.sin_addr.s_addr);
+    addrInfo.sin_port = htons(PORT);
+    InetPton(AF_INET, IP, &addrInfo.sin_addr.s_addr);
     int sizeAddrInfo = sizeof(addrInfo);
 
     SOCKET socketListenConnections = socket(AF_INET, SOCK_STREAM, 0);
@@ -217,33 +261,33 @@ void Server::receivingСonnections() {
     }
 
    
-    //this->vectorClientsInfo.resize(this->maxClientConnection);
-
-    while (listen(socketListenConnections, this->maxClientConnection) != SOCKET_ERROR) {
+    while (listen(socketListenConnections, MAX_CLIENT_CONNECTIONS) != SOCKET_ERROR) {
 
         SOCKET newClientConnection = accept(socketListenConnections, reinterpret_cast<SOCKADDR*>(&addrInfo), &sizeAddrInfo);
         if (newClientConnection == 0) {
-            throw ExceptionNetwork(7, "connection could not be accepted");
+            throw ExceptionNetwork(6, "connection could not be accepted");
         }
         else {
-            
-            ClientInfo newClientInfo = ClientInfo(newClientConnection, addrInfo.sin_port);
-           
-            if (this->currentConnectionClient < this->maxClientConnection) {
-                std::string serverNotOverloaded = "true";
-                send(newClientInfo.getSocketClient(), serverNotOverloaded.c_str(), serverNotOverloaded.length(), 0);
-             
-                newClientInfo.printIncomingConnectionClient();
-                std::thread newClient([&]() {
-                    handleClient(newClientInfo.getSocketClient(), newClientInfo.getPortClient());
-                    });
-                newClient.detach();
-                this->currentConnectionClient++;
+            ProtocolAAD requestConnetionFromClient = recvData(newClientConnection); // принимаем запрос на подключение
+            if (checkRequestConnetionFromClient(requestConnetionFromClient)) { // проверяем запрос на правильность
+                if (currentConnectionClient < MAX_CLIENT_CONNECTIONS) { // проверяем загруженность сервера
+                    ClientInfo newClientInfo(newClientConnection, addrInfo.sin_port, requestConnetionFromClient.getFieldsClientID()); // создаём объект класса, который хранит информацию о подключившемся клиенте
+                    
+                    sendData(newClientInfo.clientConnection, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 200, this->USE_VERSION_PROTOCOL, responseSuccessfulConnection)); // отправляем ответ "удачное подключение + команды"
+
+                    newClientInfo.printIncomingConnectionClient(); // выводим информацию о подключившемся клиенте
+
+                    std::thread newClient([&]() {
+                        handleClient(newClientInfo); // обрабатываем клиента в отдельном потоке
+                        });
+
+                    newClient.detach();
+                    this->currentConnectionClient++; // увеличиваем счётчик подключившихся клиентов
+                }
+                else {
+                    sendData(newClientConnection, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, this->USE_VERSION_PROTOCOL, responseServerOverloaded)); // если сервер перегружен, отправляем ответ "сервер перегружен"
+                }
             }
-           else {
-              std::string serverOverloaded = "The server is overloaded, try again later";
-              send(newClientInfo.getSocketClient(), serverOverloaded.c_str(), serverOverloaded.length(), 0);
-           }
         }
     }
 }

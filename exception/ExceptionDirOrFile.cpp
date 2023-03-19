@@ -11,13 +11,11 @@ int ExceptionDirOrFile::getCodeError()
 std::string ExceptionDirOrFile::getDescriptionError()
 {
     return this->descriptionError;
-}bool ExceptionDirOrFile::checkStrPath(const std::string& pathStr) {
+}
+bool ExceptionDirOrFile::checkStrPath(const std::string& pathStr) {
     return  pathStr.find_first_not_of(this->correctAlphabets, 0) == std::string::npos ? true : false;
 }
 bool ExceptionDirOrFile::checkingFileForExistence(std::filesystem::path path) {
-    return std::filesystem::exists(path.string());
+    return std::filesystem::exists(path);
 }
 
-bool ExceptionDirOrFile::isAbsolutePath(const std::filesystem::path pathStr) {
-    return pathStr.is_absolute();
-}
