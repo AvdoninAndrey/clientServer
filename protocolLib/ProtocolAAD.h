@@ -7,7 +7,7 @@
 #include <nlohmann/json.hpp>
 #include "..\Exception\ExceptionNetwork.h"
 
-// Данный класс реализует протокол, который содержит возможные сообщения, headers и методы для отправки и приёма данных
+// Р”Р°РЅРЅС‹Р№ РєР»Р°СЃСЃ СЂРµР°Р»РёР·СѓРµС‚ РїСЂРѕС‚РѕРєРѕР», РєРѕС‚РѕСЂС‹Р№ СЃРѕРґРµСЂР¶РёС‚ РІРѕР·РјРѕР¶РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ, headers Рё РјРµС‚РѕРґС‹ РґР»СЏ РѕС‚РїСЂР°РІРєРё Рё РїСЂРёС‘РјР° РґР°РЅРЅС‹С…
 class ProtocolAAD {
 private:
 	class ProtocolAADFields {
@@ -47,7 +47,7 @@ private:
 		ProtocolAAD deserializationData(const std::string& serializationStr);
 	};
 
-	//============СЕТТЕРЫ===========
+	//============РЎР•РўРўР•Р Р«===========
 	void setFieldsHeader(const std::string& header);
 	void setFieldsDateAndTimeConnection(const std::string& dateAndTimeConnection);
 	void setFieldsClientID(const int& clientID);
@@ -69,34 +69,34 @@ private:
 	void setFieldsBytesFormatBase64(const std::string& bytesFormatBase64);
 protected:
 	//=====Headers========
-	const std::string headerConnection = "Connection"; // header, который используется при запросе на подключение клиента
-	const std::string headerSelectOption = "SelectOperation"; // header, который используется при запросе операции
-	const std::string headerAuthentication = "Authentication";  // header, который используется при запросе аутентификации
-	const std::string headerRegistration = "Registration"; // header, который используется при запросе регистрации
-	const std::string headerPathInServer = "DirectoryToSave"; // header, который используется при запросе каталога, где нужно сохранить файл
-	const std::string headerFileSend = "FileSend"; // header, который когда используется при запросе на передачу файла
+	const std::string headerConnection = "Connection"; // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ РЅР° РїРѕРґРєР»СЋС‡РµРЅРёРµ РєР»РёРµРЅС‚Р°
+	const std::string headerSelectOption = "SelectOperation"; // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ РѕРїРµСЂР°С†РёРё
+	const std::string headerAuthentication = "Authentication";  // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё
+	const std::string headerRegistration = "Registration"; // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ СЂРµРіРёСЃС‚СЂР°С†РёРё
+	const std::string headerPathInServer = "DirectoryToSave"; // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ РєР°С‚Р°Р»РѕРіР°, РіРґРµ РЅСѓР¶РЅРѕ СЃРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р»
+	const std::string headerFileSend = "FileSend"; // header, РєРѕС‚РѕСЂС‹Р№ РєРѕРіРґР° РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё Р·Р°РїСЂРѕСЃРµ РЅР° РїРµСЂРµРґР°С‡Сѓ С„Р°Р№Р»Р°
 	
-	const std::string headerResponsive = "Response";  // header, который используется для ответа сервера
+	const std::string headerResponsive = "Response";  // header, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ РѕС‚РІРµС‚Р° СЃРµСЂРІРµСЂР°
 	
 	std::string getDateAndTimeNow();
 
-	void sendData(SOCKET clientConnection, ProtocolAAD data); // метод, который отправляет данные
-	ProtocolAAD recvData(SOCKET clientConnection); // метод, который принимает данные
+	void sendData(SOCKET clientConnection, ProtocolAAD data); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РѕС‚РїСЂР°РІР»СЏРµС‚ РґР°РЅРЅС‹Рµ
+	ProtocolAAD recvData(SOCKET clientConnection); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїСЂРёРЅРёРјР°РµС‚ РґР°РЅРЅС‹Рµ
 
 public:
 
 	ProtocolAAD() = default;
-	//=====Конструктуры==========
-	ProtocolAAD(const std::string& header, const int & clientID, const double & versionProtocol, const std::string & dateAndTimeConnection); // Запрос на подключение
-	ProtocolAAD(const std::string& header, const int& clientID, const std::string& operation); // Запрос на операцию
-	ProtocolAAD(const std::string& header, const int& clientID, const std::string& login, const std::string& password, const std::string& dateAndTimeAuthentication); // Запрос аутентификации
-	ProtocolAAD(const std::string& header, const int& clientID, const std::string& newLogin, const std::string& newPassword); // Запрос регистрации
-	ProtocolAAD(const std::string& header, const int& clientID, const bool isDefaultServerPath, const std::string& pathDirectory); // Запрос пути для сохранения 
-	ProtocolAAD(const std::string& header, const int& clientID, const bool sendFile, const std::string& filename, const int & sizeFile, const std::string & bytesFormatBase64); // запрос на передачу файла
+	//=====РљРѕРЅСЃС‚СЂСѓРєС‚СѓСЂС‹==========
+	ProtocolAAD(const std::string& header, const int & clientID, const double & versionProtocol, const std::string & dateAndTimeConnection); // Р—Р°РїСЂРѕСЃ РЅР° РїРѕРґРєР»СЋС‡РµРЅРёРµ
+	ProtocolAAD(const std::string& header, const int& clientID, const std::string& operation); // Р—Р°РїСЂРѕСЃ РЅР° РѕРїРµСЂР°С†РёСЋ
+	ProtocolAAD(const std::string& header, const int& clientID, const std::string& login, const std::string& password, const std::string& dateAndTimeAuthentication); // Р—Р°РїСЂРѕСЃ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё
+	ProtocolAAD(const std::string& header, const int& clientID, const std::string& newLogin, const std::string& newPassword); // Р—Р°РїСЂРѕСЃ СЂРµРіРёСЃС‚СЂР°С†РёРё
+	ProtocolAAD(const std::string& header, const int& clientID, const bool isDefaultServerPath, const std::string& pathDirectory); // Р—Р°РїСЂРѕСЃ РїСѓС‚Рё РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ 
+	ProtocolAAD(const std::string& header, const int& clientID, const bool sendFile, const std::string& filename, const int & sizeFile, const std::string & bytesFormatBase64); // Р·Р°РїСЂРѕСЃ РЅР° РїРµСЂРµРґР°С‡Сѓ С„Р°Р№Р»Р°
 
-	ProtocolAAD(const std::string& header, const std::string & dateAndTimeResponse, const int& responceCode, const double& versionProtocol, const std::string& responseText); // ответ сервера
+	ProtocolAAD(const std::string& header, const std::string & dateAndTimeResponse, const int& responceCode, const double& versionProtocol, const std::string& responseText); // РѕС‚РІРµС‚ СЃРµСЂРІРµСЂР°
 
-	//=====Геттеры==========
+	//=====Р“РµС‚С‚РµСЂС‹==========
 	std::string getFieldsHeader();
 	int getFieldsClientID();
 	double getFieldsVersionProtocol();

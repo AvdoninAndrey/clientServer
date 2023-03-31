@@ -16,6 +16,17 @@ Client::Client(std::filesystem::path clientFilePath) {
     }
 }
 
+bool Client::checkInputClient(const std::string& input) {
+    return  input.find_first_not_of(this->CORRECT_ALPHABET_INPUT_CLIENT, 0) == std::string::npos ? true : false;
+}
+
+void Client::correctInput(std::string& input) {
+    while (checkInputClient(input) != true) {
+        std::cout << "Incorrect input, try again" << std::endl;
+        std::cin >> input;
+    }
+}
+
 int Client::generationIdForClient() {
     int randIdClient = rand() % 3 + 1;
 
@@ -109,69 +120,82 @@ void Client::disconnect() {
 void Client::workByServer() {
    bool connect = true;
    int id = this->clientId;
+ 
 
    while (connect) {
+           std::string select;
+           std::cin >> select;
+          // while (checkInputClient(select) != true) {
+          //     std::cin >> select;
+          // }
+           correctInput(select);
 
-       std::string select;
-       std::cin >> select;
-       ProtocolAAD requestSelectOpetation(headerSelectOption, id, select);
-       sendData(this->clientSocketConnection, requestSelectOpetation); // отправляем запрос на какую-либо операцию
+           ProtocolAAD requestSelectOpetation(headerSelectOption, id, select);
+           sendData(this->clientSocketConnection, requestSelectOpetation); // отправляем запрос на какую-либо операцию
 
-       if (requestSelectOpetation.getFieldsOperation() == "logIn") {
-           printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Введите логин и пароль"
-           std::string login, password;
-           std::cin >> login >> password;
-           sendData(this->clientSocketConnection, ProtocolAAD(headerAuthentication, id, login, password, getDateAndTimeNow())); // отправляем запрос аутентификации
-           ProtocolAAD responseServerRequestAuthentication = recvData(this->clientSocketConnection); // ответ сервера на запрос аутентификации
-           printMessageFromResponseServer(responseServerRequestAuthentication); // выводим полученный ответ
-           if (responseServerRequestAuthentication.getFieldsResponseCode() == 200) { // если аутентификация прошла успешно
-               bool selectDirectoryToSave = true;
-               while (selectDirectoryToSave) {
-                   std::string selectDirectory;
-                   std::cin >> selectDirectory;
-                   if (selectDirectory == "default") {
-                       sendData(this->clientSocketConnection, ProtocolAAD(headerPathInServer, id, true, "")); // отправляем запрос на выбор каталога (выбран стандартный каталог)
-                       printMessageFromResponseServer(recvData(this->clientSocketConnection)); // выводим ответ "путь указан верно"
-                       sendFileToServer(); //отправляем файл (здесь отправляется запрос на передачу)
-                       ProtocolAAD responseServerRequestFileSend = recvData(this->clientSocketConnection);
-                       printMessageFromResponseServer(responseServerRequestFileSend); // выводим полученный ответ
-                       selectDirectoryToSave = false;
-                   }
-                   else {
-                       sendData(this->clientSocketConnection, ProtocolAAD(headerPathInServer, id, false, selectDirectory)); // отправляем запрос на выбор каталога (выбран нестандартный каталог)
-                       
-                       ProtocolAAD responseServerRequestDirectoryToSave = recvData(this->clientSocketConnection); // получаем ответ "путь указан верно" или "путь указан неверно"
-                       if (responseServerRequestDirectoryToSave.getFieldsResponseCode() == 200) {
-                           printMessageFromResponseServer(responseServerRequestDirectoryToSave); // выводим ответ "путь указан верно"
-                           sendFileToServer();   //отправляем файл (здесь отправляется запрос на передачу)
+           if (requestSelectOpetation.getFieldsOperation() == "logIn") {
+               printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Введите логин и пароль"
+               std::string login, password;
+               std::cin >> login;
+               correctInput(login);
+               std::cin >> password;
+               correctInput(password);
+               sendData(this->clientSocketConnection, ProtocolAAD(headerAuthentication, id, login, password, getDateAndTimeNow())); // отправляем запрос аутентификации
+               ProtocolAAD responseServerRequestAuthentication = recvData(this->clientSocketConnection); // ответ сервера на запрос аутентификации
+               printMessageFromResponseServer(responseServerRequestAuthentication); // выводим полученный ответ
+               if (responseServerRequestAuthentication.getFieldsResponseCode() == 200) { // если аутентификация прошла успешно
+                   bool selectDirectoryToSave = true;
+                   while (selectDirectoryToSave) {
+                       std::string selectDirectory;
+                       std::cin >> selectDirectory;
+                       correctInput(selectDirectory);
+                       if (selectDirectory == "default") {
+                           sendData(this->clientSocketConnection, ProtocolAAD(headerPathInServer, id, true, "")); // отправляем запрос на выбор каталога (выбран стандартный каталог)
+                           printMessageFromResponseServer(recvData(this->clientSocketConnection)); // выводим ответ "путь указан верно"
+                           sendFileToServer(); //отправляем файл (здесь отправляется запрос на передачу)
                            ProtocolAAD responseServerRequestFileSend = recvData(this->clientSocketConnection);
                            printMessageFromResponseServer(responseServerRequestFileSend); // выводим полученный ответ
                            selectDirectoryToSave = false;
                        }
                        else {
-                            printMessageFromResponseServer(responseServerRequestDirectoryToSave);  // выводим ответ "путь указан неверно"
+                           sendData(this->clientSocketConnection, ProtocolAAD(headerPathInServer, id, false, selectDirectory)); // отправляем запрос на выбор каталога (выбран нестандартный каталог)
+
+                           ProtocolAAD responseServerRequestDirectoryToSave = recvData(this->clientSocketConnection); // получаем ответ "путь указан верно" или "путь указан неверно"
+                           if (responseServerRequestDirectoryToSave.getFieldsResponseCode() == 200) {
+                               printMessageFromResponseServer(responseServerRequestDirectoryToSave); // выводим ответ "путь указан верно"
+                               sendFileToServer();   //отправляем файл (здесь отправляется запрос на передачу)
+                               ProtocolAAD responseServerRequestFileSend = recvData(this->clientSocketConnection);
+                               printMessageFromResponseServer(responseServerRequestFileSend); // выводим полученный ответ
+                               selectDirectoryToSave = false;
+                           }
+                           else {
+                               printMessageFromResponseServer(responseServerRequestDirectoryToSave);  // выводим ответ "путь указан неверно"
+                           }
                        }
                    }
+                   connect = false;
                }
+           }
+           else if (requestSelectOpetation.getFieldsOperation() == "register") {
+               printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Придумайте и введите логин и пароль"
+               std::string newLogin, newPassword;
+               std::cin >> newLogin;
+               correctInput(newLogin);
+               std::cin >> newPassword;
+               correctInput(newPassword);
+               sendData(this->clientSocketConnection, ProtocolAAD(headerRegistration, id, newLogin, newPassword)); // отправляем запрос регистрации
+               ProtocolAAD responseServerRequestRegistration = recvData(this->clientSocketConnection); // ответ сервера на запрос регистрации
+               printMessageFromResponseServer(responseServerRequestRegistration); // выводим полученный ответ о результате регистрации
+           }
+           else if (requestSelectOpetation.getFieldsOperation() == "disconnect") {
+               printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Вы были отключены"
                connect = false;
            }
+           else {
+               printMessageFromResponseServer(recvData(this->clientSocketConnection));  // пришёл ответ "операции не существует"
+           }
        }
-       else if (requestSelectOpetation.getFieldsOperation() == "register") {
-           printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Придумайте и введите логин и пароль"
-           std::string newLogin, newPassword;
-           std::cin >> newLogin >> newPassword;
-           sendData(this->clientSocketConnection, ProtocolAAD(headerRegistration, id, newLogin, newPassword)); // отправляем запрос регистрации
-           ProtocolAAD responseServerRequestRegistration = recvData(this->clientSocketConnection); // ответ сервера на запрос регистрации
-           printMessageFromResponseServer(responseServerRequestRegistration); // выводим полученный ответ о результате регистрации
-       }
-       else if (requestSelectOpetation.getFieldsOperation() == "disconnect") {
-           printMessageFromResponseServer(recvData(this->clientSocketConnection)); // пришёл ответ "Вы были отключены"
-           connect = false;
-       }
-       else {
-           printMessageFromResponseServer(recvData(this->clientSocketConnection));  // пришёл ответ "операции не существует"
-       }
-   }
+
    disconnect();
 }
 

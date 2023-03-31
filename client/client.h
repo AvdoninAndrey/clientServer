@@ -18,21 +18,23 @@ private:
 	const int PORT = 55000; // port
 	const double USE_VERSION_PROTOCOL = 1.1;
 	const std::string PATH_FILE_ID_CLIENTS = "D:\\Programming\\C++\\clientServer\\client\\idClients.txt";
+	const std::string CORRECT_ALPHABET_INPUT_CLIENT = " !\"#$ % &'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	int clientId; // С…СЂР°РЅРёС‚ id РєР»РёРµРЅС‚Р°
+	
+	int generationIdForClient(); // РіРµРЅРµСЂРёСЂСѓРµС‚ id РєР»РёРµРЅС‚Р°
+	bool checkIdClientAlreadyExists(const int& idClient); // РїСЂРѕРІРµСЂСЏРµС‚ РµСЃС‚СЊ Р»Рё РєР»РёРµРЅС‚ СЃ С‚Р°РєРёРј Р¶Рµ id
+	void removeClientIdFromFile(const int& idClient); // РєРѕРіРґР° РєР»РёРµРЅС‚ РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ СѓРґР°Р»СЏРµС‚СЃСЏ id РёР· СЃРїРёСЃРєР°
+	bool checkInputClient(const std::string& input); // РїСЂРѕРІРµСЂСЏРµС‚ РєР»РёРµРЅС‚СЃРєРёР№ РІРІРѕРґ РЅР° РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ
+	void correctInput(std::string& input);  // СЂР°Р±РѕС‚Р°РµС‚ РґРѕ С‚РµС… РїРѕСЂ, РїРѕРєР° РєР»РёРµРЅС‚ РЅРµ РїСЂРѕРёР·РІРµРґС‘С‚ РєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ
 
-	int generationIdForClient(); // генерирует id клиента
-	bool checkIdClientAlreadyExists(const int& idClient); // проверяет есть ли клиент с таким же id
-	void removeClientIdFromFile(const int& idClient); // когда клиент отключается удаляется id из списка
+	SOCKET clientSocketConnection; // СЃРѕРєРµС‚ РєР»РёРµРЅС‚Р°
+	std::filesystem::path clientFilePath; // РїСѓС‚СЊ РґРѕ С„Р°Р№Р»Р°, РєРѕС‚РѕСЂС‹Р№ РєР»РёРµРЅС‚ С…РѕС‡РµС‚ РїРµСЂРµРґР°С‚СЊ РЅР° СЃРµСЂРІРµСЂ
+	void printMessageFromResponseServer(ProtocolAAD data); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїРµС‡Р°С‚Р°РµС‚ РѕС‚РІРµС‚ СЃРµСЂРІРµСЂР°
 
-
-	int clientId;
-	SOCKET clientSocketConnection; // сокет клиента
-	std::filesystem::path clientFilePath; // путь до файла, который клиент хочет передать на сервер
-	void printMessageFromResponseServer(ProtocolAAD data); // метод, который печатает ответ сервера
-
-	void sendFileToServer(); // метод, который отправляет файл на сервер
-	void disconnect(); // метод, который закрывает соединение с сервером
-	void workByServer(); // метод, который осуществляет взаимодействие с сервером
+	void sendFileToServer(); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РѕС‚РїСЂР°РІР»СЏРµС‚ С„Р°Р№Р» РЅР° СЃРµСЂРІРµСЂ
+	void disconnect(); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ Р·Р°РєСЂС‹РІР°РµС‚ СЃРѕРµРґРёРЅРµРЅРёРµ СЃ СЃРµСЂРІРµСЂРѕРј
+	void workByServer(); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РѕСЃСѓС‰РµСЃС‚РІР»СЏРµС‚ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ СЃ СЃРµСЂРІРµСЂРѕРј
 public:
-	Client(std::filesystem::path clientFilePath); // конструктор, инициализируется указанным путём до файла
-	void connectToServer(); // подключение к серверу
+	Client(std::filesystem::path clientFilePath); // РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ, РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚СЃСЏ СѓРєР°Р·Р°РЅРЅС‹Рј РїСѓС‚С‘Рј РґРѕ С„Р°Р№Р»Р°
+	void connectToServer(); // РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ
 };

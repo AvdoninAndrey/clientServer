@@ -17,35 +17,35 @@ class Server : public ProtocolAAD, public Base64
 private:
 	const PCWSTR  IP = (L"127.0.0.1"); // IP
 	const int PORT = 55000; // PORT
-	const std::string FILE_AUTH_PATH = "D:\\Programming\\C++\\clientServer\\server\\usersDataAuthentication.txt"; // путь до файла с учётными записями клиентов
-	const std::string DEFAULT_DIRECTORY_FOR_SAVE_FILES = "D:\\Programming\\C++\\clientServer\\server\\filesClients"; // стандартный каталог куда могут сохраняться файлы клиентов
-	const int MAX_CLIENT_CONNECTIONS = 3; // максимальное количество соединений
-	const double USE_VERSION_PROTOCOL = 1.1; // используемая версия протокола
+	const std::string FILE_AUTH_PATH = "D:\\Programming\\C++\\clientServer\\server\\usersDataAuthentication.txt"; // РїСѓС‚СЊ РґРѕ С„Р°Р№Р»Р° СЃ СѓС‡С‘С‚РЅС‹РјРё Р·Р°РїРёСЃСЏРјРё РєР»РёРµРЅС‚РѕРІ
+	const std::string DEFAULT_DIRECTORY_FOR_SAVE_FILES = "D:\\Programming\\C++\\clientServer\\server\\filesClients"; // СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РєР°С‚Р°Р»РѕРі РєСѓРґР° РјРѕРіСѓС‚ СЃРѕС…СЂР°РЅСЏС‚СЊСЃСЏ С„Р°Р№Р»С‹ РєР»РёРµРЅС‚РѕРІ
+	const int MAX_CLIENT_CONNECTIONS = 3; // РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРѕРµРґРёРЅРµРЅРёР№
+	const double USE_VERSION_PROTOCOL = 1.1; // РёСЃРїРѕР»СЊР·СѓРµРјР°СЏ РІРµСЂСЃРёСЏ РїСЂРѕС‚РѕРєРѕР»Р°
 
-	const std::map<std::string, std::string> OPERATIONS_SERVER = { {"OPERATION_AUTHENTICATION", "logIn"}, {"OPERATION_REGISTRATION", "register"}, {"DISCONNECT", "disconnect"}}; // список операций на сервере при подключении
+	const std::map<std::string, std::string> OPERATIONS_SERVER = { {"OPERATION_AUTHENTICATION", "logIn"}, {"OPERATION_REGISTRATION", "register"}, {"DISCONNECT", "disconnect"}}; // СЃРїРёСЃРѕРє РѕРїРµСЂР°С†РёР№ РЅР° СЃРµСЂРІРµСЂРµ РїСЂРё РїРѕРґРєР»СЋС‡РµРЅРёРё
 
-	int currentConnectionClient = 0; // счётчик текущих подключений
+	int currentConnectionClient = 0; // СЃС‡С‘С‚С‡РёРє С‚РµРєСѓС‰РёС… РїРѕРґРєР»СЋС‡РµРЅРёР№
 
-	bool checkDirectoryEnteredClient(const std::string& enteredDirectory); // проверка, что указанный каталог для сохранения существует
+	bool checkDirectoryEnteredClient(const std::string& enteredDirectory); // РїСЂРѕРІРµСЂРєР°, С‡С‚Рѕ СѓРєР°Р·Р°РЅРЅС‹Р№ РєР°С‚Р°Р»РѕРі РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ СЃСѓС‰РµСЃС‚РІСѓРµС‚
 	
-	bool checkRegistrationClientStr(const std::string& str); // проверка, чтобы в логине и пароли не была символа "_"
+	bool checkRegistrationClientStr(const std::string& str); // РїСЂРѕРІРµСЂРєР°, С‡С‚РѕР±С‹ РІ Р»РѕРіРёРЅРµ Рё РїР°СЂРѕР»Рё РЅРµ Р±С‹Р»Р° СЃРёРјРІРѕР»Р° "_"
 
-	bool authorizationClient(const std::string& loginClient, const std::string& passwdClient); // метод, который производит аутентификации клиента
-	bool registrationClient(const std::string& newLoginClient, const std::string& newPasswdClient); // метод, который производит регистрирацию клиента
-	void recvFile(ProtocolAAD requestFileSendFromClient, const bool flagDefaultPath, std::string pathForSave = ""); // метод, который принимает и сохраняет файл на сервере
-	
-	
+	bool authorizationClient(const std::string& loginClient, const std::string& passwdClient); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїСЂРѕРёР·РІРѕРґРёС‚ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё РєР»РёРµРЅС‚Р°
+	bool registrationClient(const std::string& newLoginClient, const std::string& newPasswdClient); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїСЂРѕРёР·РІРѕРґРёС‚ СЂРµРіРёСЃС‚СЂРёСЂР°С†РёСЋ РєР»РёРµРЅС‚Р°
+	void recvFile(ProtocolAAD requestFileSendFromClient, const bool flagDefaultPath, std::string pathForSave = ""); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїСЂРёРЅРёРјР°РµС‚ Рё СЃРѕС…СЂР°РЅСЏРµС‚ С„Р°Р№Р» РЅР° СЃРµСЂРІРµСЂРµ
 	
 	
-	bool checkAuthorizationClientAlreadyExists(const std::string & loginClient); // метод, который проверяет если такой клиент уже был аутентифицирован на сервере
-	void removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient); // при отключении от сервера логин клиента удаляется из списка аутентифицированнных клиентов
+	
+	
+	bool checkAuthorizationClientAlreadyExists(const std::string & loginClient); // РјРµС‚РѕРґ, РєРѕС‚РѕСЂС‹Р№ РїСЂРѕРІРµСЂСЏРµС‚ РµСЃР»Рё С‚Р°РєРѕР№ РєР»РёРµРЅС‚ СѓР¶Рµ Р±С‹Р» Р°СѓС‚РµРЅС‚РёС„РёС†РёСЂРѕРІР°РЅ РЅР° СЃРµСЂРІРµСЂРµ
+	void removeLoginFromTheListOfAuthorizedemoveLogin(const std::string& loginClient); // РїСЂРё РѕС‚РєР»СЋС‡РµРЅРёРё РѕС‚ СЃРµСЂРІРµСЂР° Р»РѕРіРёРЅ РєР»РёРµРЅС‚Р° СѓРґР°Р»СЏРµС‚СЃСЏ РёР· СЃРїРёСЃРєР° Р°СѓС‚РµРЅС‚РёС„РёС†РёСЂРѕРІР°РЅРЅРЅС‹С… РєР»РёРµРЅС‚РѕРІ
 
-	bool checkRequestConnetionFromClient(ProtocolAAD requestConnetion); // производит проверку запроса на подключения
-	bool checkRequestFileSendFromClient(ProtocolAAD requestFileSend); // производит проверку запроса на передачу файла
+	bool checkRequestConnetionFromClient(ProtocolAAD requestConnetion); // РїСЂРѕРёР·РІРѕРґРёС‚ РїСЂРѕРІРµСЂРєСѓ Р·Р°РїСЂРѕСЃР° РЅР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ
+	bool checkRequestFileSendFromClient(ProtocolAAD requestFileSend); // РїСЂРѕРёР·РІРѕРґРёС‚ РїСЂРѕРІРµСЂРєСѓ Р·Р°РїСЂРѕСЃР° РЅР° РїРµСЂРµРґР°С‡Сѓ С„Р°Р№Р»Р°
 
-	std::vector<std::string> authorizedСlientsList = {}; // хранит список аутентифицированных клиентов на сервере
+	std::vector<std::string> authorizedРЎlientsList = {}; // С…СЂР°РЅРёС‚ СЃРїРёСЃРѕРє Р°СѓС‚РµРЅС‚РёС„РёС†РёСЂРѕРІР°РЅРЅС‹С… РєР»РёРµРЅС‚РѕРІ РЅР° СЃРµСЂРІРµСЂРµ
 
-	class ClientInfo { //Класс хранит сокет клиента, порт на котором он взаимодействует с пользователем и id клиента, а также если клиент прошёл аутентификацию и логин
+	class ClientInfo { //РљР»Р°СЃСЃ С…СЂР°РЅРёС‚ СЃРѕРєРµС‚ РєР»РёРµРЅС‚Р°, РїРѕСЂС‚ РЅР° РєРѕС‚РѕСЂРѕРј РѕРЅ РІР·Р°РёРјРѕРґРµР№СЃС‚РІСѓРµС‚ СЃ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј Рё id РєР»РёРµРЅС‚Р°, Р° С‚Р°РєР¶Рµ РµСЃР»Рё РєР»РёРµРЅС‚ РїСЂРѕС€С‘Р» Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёСЋ Рё Р»РѕРіРёРЅ
 	public:
 		SOCKET clientConnection;
 		USHORT portClient;
@@ -54,10 +54,10 @@ private:
 		void printIncomingConnectionClient();
 		ClientInfo(SOCKET clientConnection, USHORT portClient, const int ClientId);
 	};
-	void disconnectClient(ClientInfo dataClient); // для отключения клиента от сервара
-	void handleClient(ClientInfo client); //обработка подключённого клиента	
+	void disconnectClient(ClientInfo dataClient); // РґР»СЏ РѕС‚РєР»СЋС‡РµРЅРёСЏ РєР»РёРµРЅС‚Р° РѕС‚ СЃРµСЂРІР°СЂР°
+	void handleClient(ClientInfo client); //РѕР±СЂР°Р±РѕС‚РєР° РїРѕРґРєР»СЋС‡С‘РЅРЅРѕРіРѕ РєР»РёРµРЅС‚Р°	
 
-	//=========Возможные ответы сервера======
+	//=========Р’РѕР·РјРѕР¶РЅС‹Рµ РѕС‚РІРµС‚С‹ СЃРµСЂРІРµСЂР°======
 	const std::string responseSuccessfulConnection = "You have successfully connected to the server. To send a file to the server, you need to log in or register:\n"
 		"to log in, enter \"logIn\", to register, enter \"register\", to disconnect, enter \"disconnect\"";
 	const std::string responseServerOverloaded = "the server is overloaded";
@@ -78,5 +78,5 @@ private:
 	const std::string responseSuccessfulFileSend = "The file was saved successfully";
 	const std::string responseFailedFileSend = "Request incorrect file not accepted";
 public:
-	void receivingСonnections(); // принимает соединения клиентов
+	void receivingРЎonnections(); // РїСЂРёРЅРёРјР°РµС‚ СЃРѕРµРґРёРЅРµРЅРёСЏ РєР»РёРµРЅС‚РѕРІ
 };

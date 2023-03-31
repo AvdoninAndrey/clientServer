@@ -3,9 +3,11 @@
 int main() {
 	std::string clientFilePath;
 	bool selectFileFlag = true;
-	
+	const std::string correctAlphabetsInput = " !\"#$ % &'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	std::cout << "When working with the server, use the following alphabet to enter:\n" << correctAlphabetsInput << std::endl;
 	while (selectFileFlag) {
-		std::cout << "Specify the path to the file you want to want to the server:";
+
+		std::cout << "Specify the path to the file you want to want to the server: ";
 		std::cin >> clientFilePath;
 		std::filesystem::path convertFilePath(clientFilePath);
 
