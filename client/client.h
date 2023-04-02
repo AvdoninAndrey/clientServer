@@ -19,14 +19,13 @@ private:
 	const double USE_VERSION_PROTOCOL = 1.1;
 	const std::string PATH_FILE_ID_CLIENTS = "D:\\Programming\\C++\\clientServer\\client\\idClients.txt";
 	const std::string CORRECT_ALPHABET_INPUT_CLIENT = " !\"#$ % &'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-	int clientId; // хранит id клиента
-	
+
 	int generationIdForClient(); // генерирует id клиента
 	bool checkIdClientAlreadyExists(const int& idClient); // проверяет есть ли клиент с таким же id
 	void removeClientIdFromFile(const int& idClient); // когда клиент отключается удаляется id из списка
-	bool checkInputClient(const std::string& input); // проверяет клиентский ввод на корректность
-	void correctInput(std::string& input);  // работает до тех пор, пока клиент не произведёт корректный ввод
-
+	bool checkInputClient(const std::string& input);
+	void correctInput(std::string& input);
+	int clientId;
 	SOCKET clientSocketConnection; // сокет клиента
 	std::filesystem::path clientFilePath; // путь до файла, который клиент хочет передать на сервер
 	void printMessageFromResponseServer(ProtocolAAD data); // метод, который печатает ответ сервера
@@ -36,5 +35,7 @@ private:
 	void workByServer(); // метод, который осуществляет взаимодействие с сервером
 public:
 	Client(std::filesystem::path clientFilePath); // конструктор, инициализируется указанным путём до файла
+	Client() = default;
 	void connectToServer(); // подключение к серверу
+	std::string getCorectAphabetInputClient();
 };

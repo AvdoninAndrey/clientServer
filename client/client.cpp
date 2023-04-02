@@ -28,10 +28,10 @@ void Client::correctInput(std::string& input) {
 }
 
 int Client::generationIdForClient() {
-    int randIdClient = rand() % 3 + 1;
+    int randIdClient = rand() % 9 + 1;
 
     while (checkIdClientAlreadyExists(randIdClient) != true) {
-        randIdClient = rand() % 3 + 1;
+        randIdClient = rand() % 9 + 1;
     }
     std::ofstream fileWriteIdClients;
     fileWriteIdClients.open(this->PATH_FILE_ID_CLIENTS, std::ofstream::ios_base::app);
@@ -52,9 +52,12 @@ bool Client::checkIdClientAlreadyExists(const int& idClient) {
     fileReadIdClients.close();
 
     for (size_t i = 0; i < buffer.size(); i++) {
-        if (buffer[i] == atoi(std::to_string(idClient).c_str())) {
+        if (buffer[i] == static_cast<char>(idClient)) {
             result = false;
         }
+        //if (buffer[i] == atoi(std::to_string(idClient).c_str())) {
+         //   result = false;
+        //}
     }
     return result;
 }
@@ -73,9 +76,13 @@ void Client::removeClientIdFromFile(const int& idClient) {
     fileReadIdClients.close();
 
     for (size_t i = 0; i < buffer.size(); i++) {
-        if (buffer[i] == atoi(std::to_string(idClient).c_str())) {
+        if (buffer[i] == static_cast<char>(idClient)) {
             indexElementRemove = i;
         }
+        
+        //if (buffer[i] == atoi(std::to_string(idClient).c_str())) {
+         //   indexElementRemove = i;
+       // }
     }
 
     buffer.erase(indexElementRemove, 1);
@@ -87,7 +94,9 @@ void Client::removeClientIdFromFile(const int& idClient) {
 }
 
 
-
+std::string Client::getCorectAphabetInputClient() {
+    return this->CORRECT_ALPHABET_INPUT_CLIENT;
+}
 void Client::printMessageFromResponseServer(ProtocolAAD data) {
     std::cout << data.getFieldsResponseText() << std::endl;
 }
@@ -235,6 +244,7 @@ void Client::connectToServer() {
         }
         else if (response.getFieldsResponseCode() == 400) { // ответ: сервер перегружен
             printMessageFromResponseServer(response);
+            closesocket(this->clientSocketConnection);
         }
     }
 }

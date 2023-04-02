@@ -210,7 +210,7 @@ void Server::handleClient(ClientInfo client) {
 bool Server::checkRequestConnetionFromClient(ProtocolAAD requestConnetion) {
     if (requestConnetion.getFieldsHeader() == headerConnection) {
         if (requestConnetion.getFieldsVersionProtocol() == this->USE_VERSION_PROTOCOL) {
-            if (requestConnetion.getFieldsClientID() >= 1 && requestConnetion.getFieldsClientID() <= 3) {
+            if (requestConnetion.getFieldsClientID() >= 1 && requestConnetion.getFieldsClientID() <= 9) {
                 if (requestConnetion.getFieldsDateAndTimeConnection() != "") {
                     return true;
                 }
@@ -286,6 +286,7 @@ void Server::receivingСonnections() {
                 }
                 else {
                     sendData(newClientConnection, ProtocolAAD(headerResponsive, getDateAndTimeNow(), 400, this->USE_VERSION_PROTOCOL, responseServerOverloaded)); // если сервер перегружен, отправляем ответ "сервер перегружен"
+                    closesocket(newClientConnection);
                 }
             }
         }
